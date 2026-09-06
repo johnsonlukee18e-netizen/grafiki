@@ -104,6 +104,11 @@ jobs:
             exit 1
           fi
 
+          # A fingerprint is not secret and is the fastest way to tell whether
+          # the key in the secret is the one installed on the server.
+          echo "Deploy key fingerprint (must match an entry in authorized_keys):"
+          ssh-keygen -lf ~/.ssh/id_ed25519 | sed 's/^/  /'
+
           # A failure here means the server is unreachable - do not hide it.
           ssh-keyscan -p "$port" -H "$host" > ~/.ssh/known_hosts 2>/tmp/keyscan.err || true
           if [ ! -s ~/.ssh/known_hosts ]; then
@@ -122,10 +127,25 @@ jobs:
           # so it is reviewable and runnable by hand on the server.
           # BatchMode makes a missing/locked key fail fast instead of hanging
           # on an interactive password prompt.
-          ssh -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=15 \
-            "$SSH_USER@$SSH_HOST" \
-            "APP_DIR='${DEPLOY_PATH:-/opt/nurse-scheduler}' GIT_REF='$GIT_REF' bash -s" \
-            < scripts/deploy-remote.sh
+          if ! ssh -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=15 \
+                 "$SSH_USER@$SSH_HOST" \
+                 "APP_DIR='${DEPLOY_PATH:-/opt/nurse-scheduler}' GIT_REF='$GIT_REF' bash -s" \
+                 < scripts/deploy-remote.sh; then
+            code=$?
+            if [ "$code" = "255" ]; then
+              echo "::error::SSH refused the deploy key (see the message above)."
+              echo "  On the VPS, as the DEPLOY_USER account, check that:"
+              echo "    1. the matching PUBLIC key is in ~/.ssh/authorized_keys"
+              echo "       compare fingerprints:"
+              echo "         ssh-keygen -lf ~/.ssh/github_deploy.pub"
+              echo "       against the one printed in the Configure SSH step above;"
+              echo "    2. DEPLOY_USER names the account that owns that file;"
+              echo "    3. permissions are right - sshd silently refuses otherwise:"
+              echo "         chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
+              echo "         chmod go-w ~"
+            fi
+            exit "$code"
+          fi
 
       - name: Remove SSH key
         if: always()
