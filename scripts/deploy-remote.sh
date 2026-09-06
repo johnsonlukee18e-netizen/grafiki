@@ -36,7 +36,21 @@ fi
 
 # --- code -----------------------------------------------------------------
 echo "== fetching $GIT_REF =="
-git fetch --all --prune
+if ! git fetch --all --prune 2>/tmp/nurse-fetch.err; then
+  sed 's/^/  /' /tmp/nurse-fetch.err >&2
+  if grep -q 'could not read Username' /tmp/nurse-fetch.err; then
+    echo "ERROR: this server cannot authenticate to GitHub." >&2
+    echo "  The repository is private and was cloned over HTTPS, but a deployment" >&2
+    echo "  runs without a terminal, so git has no way to ask for credentials." >&2
+    echo "  Switch the remote to a read-only deploy key:" >&2
+    echo "    ssh-keygen -t ed25519 -C 'grafiki-repo' -f ~/.ssh/github_repo -N ''" >&2
+    echo "    cat ~/.ssh/github_repo.pub   # add it under Settings -> Deploy keys" >&2
+    echo "    printf 'Host github.com\\n  IdentityFile ~/.ssh/github_repo\\n  IdentitiesOnly yes\\n' >> ~/.ssh/config" >&2
+    echo "    ssh -T git@github.com        # accept the host key once" >&2
+    echo "    git remote set-url origin git@github.com:OWNER/REPO.git" >&2
+  fi
+  exit 1
+fi
 git checkout --detach "$GIT_REF"
 
 # --- TLS ------------------------------------------------------------------
