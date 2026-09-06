@@ -269,3 +269,103 @@ def test_rate_limiter_blocks_a_flood(client, monkeypatch):
     blocked = client.get("/api/auth/status")
     assert blocked.status_code == 429
     assert "Retry-After" in blocked.headers
+
+
+# --- new accounts must be approved before they get in ---------------------
+def _google_identity(email: str, subject: str):
+    from app.security.oauth import GoogleIdentity
+
+    return GoogleIdentity(
+        subject=subject,
+        email=email,
+        email_verified=True,
+        name="Nowa Osoba",
+        picture=None,
+        hosted_domain=None,
+    )
+
+
+def test_first_account_ever_is_an_active_admin(db_session):
+    from app.services import user_service
+
+    user = user_service.upsert_from_google(db_session, _google_identity("first@x.pl", "s1"))
+    db_session.commit()
+    assert user.role.value == "ADMIN"
+    assert user.is_active is True
+
+
+def test_a_second_google_account_is_created_locked(db_session):
+    """Passing Google's login only proves identity, not authorisation."""
+    from app.services import user_service
+
+    user_service.upsert_from_google(db_session, _google_identity("first@x.pl", "s1"))
+    db_session.commit()
+
+    stranger = user_service.upsert_from_google(
+        db_session, _google_identity("stranger@gmail.com", "s2")
+    )
+    db_session.commit()
+    assert stranger.role.value == "MANAGER"
+    assert stranger.is_active is False, "an unknown Google account must not get access"
+
+
+def test_listed_admin_email_is_active_immediately(db_session, monkeypatch):
+    from app.config import settings as live
+    from app.services import user_service
+
+    user_service.upsert_from_google(db_session, _google_identity("first@x.pl", "s1"))
+    db_session.commit()
+
+    monkeypatch.setattr(
+        type(live), "admin_emails", property(lambda self: {"boss@x.pl"})
+    )
+    boss = user_service.upsert_from_google(db_session, _google_identity("boss@x.pl", "s3"))
+    db_session.commit()
+    assert boss.role.value == "ADMIN"
+    assert boss.is_active is True
+
+
+def test_auto_activation_can_be_turned_on_deliberately(db_session, monkeypatch):
+    from app.config import settings as live
+    from app.services import user_service
+
+    user_service.upsert_from_google(db_session, _google_identity("first@x.pl", "s1"))
+    db_session.commit()
+
+    monkeypatch.setattr(live, "auto_activate_new_users", True)
+    guest = user_service.upsert_from_google(db_session, _google_identity("guest@x.pl", "s4"))
+    db_session.commit()
+    assert guest.is_active is True
+
+
+def test_locked_account_cannot_use_the_api(client, seeded, db_engine):
+    """Even with a valid session cookie, a locked account is refused."""
+    import sqlalchemy as sa
+
+    client.post("/api/auth/dev-login")
+    client.headers["X-CSRF-Token"] = client.cookies.get(settings.csrf_cookie_name)
+    assert client.get("/api/employees").status_code == 200
+
+    with db_engine.begin() as conn:
+        conn.execute(sa.text("UPDATE users SET is_active = false"))
+
+    response = client.get("/api/employees")
+    assert response.status_code == 401
+    assert "aktywacje" in response.json()["detail"]
+
+
+def test_admin_can_activate_a_pending_account(logged_in, db_session):
+    from app.services import user_service
+
+    pending = user_service.upsert_from_google(
+        db_session, _google_identity("pending@x.pl", "s9")
+    )
+    db_session.commit()
+    assert pending.is_active is False
+
+    listed = {u["email"]: u for u in logged_in.get("/api/users").json()}
+    assert listed["pending@x.pl"]["is_active"] is False
+
+    response = logged_in.put(f"/api/users/{pending.id}", json={"is_active": True})
+    assert response.status_code == 200
+    assert response.json()["is_active"] is True

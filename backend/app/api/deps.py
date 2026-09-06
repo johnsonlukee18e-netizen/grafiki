@@ -45,7 +45,7 @@ def current_user(
         session_module.clear_session(response)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Konto nie istnieje lub zostalo dezaktywowane.",
+            detail="Konto nie ma dostepu do systemu. Poproś administratora o aktywacje.",
         )
     if user.role.value != data.role:
         # The role changed since the cookie was issued - re-issue it so the

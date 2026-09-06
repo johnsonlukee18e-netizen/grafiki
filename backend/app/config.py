@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     # Comma separated e-mails that are granted ADMIN on first login.
     initial_admin_emails: str = ""
 
+    # A successful Google login only proves who somebody is, not that they may
+    # use this system. Unless this is turned on, a brand new account is created
+    # locked and an ADMIN has to activate it in the USERS panel. Leave it false
+    # in production: the Google consent screen is not an access control list.
+    auto_activate_new_users: bool = False
+
     # Development-only login shortcut (never honoured when app_env=production).
     dev_auth_enabled: bool = False
     dev_auth_email: str = "dev.admin@example.com"

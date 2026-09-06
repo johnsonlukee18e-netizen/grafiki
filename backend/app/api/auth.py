@@ -64,8 +64,12 @@ def google_callback(
 
     user = user_service.upsert_from_google(db, identity)
     if not user.is_active:
+        # The account exists and Google vouched for the identity, but nobody
+        # has granted it access to this system yet (or it was revoked).
         db.commit()
-        return _login_redirect("Konto zostalo dezaktywowane. Skontaktuj sie z administratorem.")
+        return _login_redirect(
+            "Twoje konto czeka na zatwierdzenie przez administratora oddzialu."
+        )
 
     audit_service.record(
         db,

@@ -19,13 +19,27 @@ def user_count(db: Session) -> int:
     return db.scalar(select(func.count(User.id))) or 0
 
 
+def _is_bootstrap_admin(db: Session, email: str) -> bool:
+    """Listed in INITIAL_ADMIN_EMAILS, or the very first account in the system.
+
+    The first account has to be an active administrator, otherwise nobody
+    could ever activate anybody.
+    """
+    return email.lower() in settings.admin_emails or user_count(db) == 0
+
+
 def _initial_role(db: Session, email: str) -> UserRole:
-    """First user ever, or an e-mail listed in INITIAL_ADMIN_EMAILS, is ADMIN."""
-    if email.lower() in settings.admin_emails:
-        return UserRole.ADMIN
-    if user_count(db) == 0:
-        return UserRole.ADMIN
-    return UserRole.MANAGER
+    return UserRole.ADMIN if _is_bootstrap_admin(db, email) else UserRole.MANAGER
+
+
+def _initial_active(db: Session, email: str) -> bool:
+    """Whether a newly created account may use the system straight away.
+
+    Authenticating with Google says who somebody is; it does not say they are
+    allowed in here. Every account that is not a bootstrap administrator is
+    therefore created locked and waits for an ADMIN to activate it.
+    """
+    return _is_bootstrap_admin(db, email) or settings.auto_activate_new_users
 
 
 def upsert_from_google(db: Session, identity: GoogleIdentity) -> User:
@@ -40,7 +54,7 @@ def upsert_from_google(db: Session, identity: GoogleIdentity) -> User:
             name=identity.name,
             avatar_url=identity.picture,
             role=_initial_role(db, identity.email),
-            is_active=True,
+            is_active=_initial_active(db, identity.email),
         )
         db.add(user)
     else:

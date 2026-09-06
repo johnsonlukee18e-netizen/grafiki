@@ -388,10 +388,26 @@ dla IPv4 nigdy nie zostanie osiagniety.
 
 Role przyznawane sa automatycznie przy pierwszym logowaniu:
 
-- e-mail wymieniony w `INITIAL_ADMIN_EMAILS` dostaje **ADMIN**,
+- e-mail wymieniony w `INITIAL_ADMIN_EMAILS` dostaje **ADMIN** i dostep od razu,
 - **pierwsze konto w calym systemie** dostaje **ADMIN** (nawet gdy lista
   jest pusta - inaczej nie byloby jak zaczac),
-- kazde kolejne konto dostaje **MANAGER**.
+- **kazde inne konto powstaje zablokowane**: rola MANAGER, ale bez dostepu,
+  dopoki ADMIN nie wlaczy przelacznika *Aktywne* w panelu **Uzytkownicy**.
+
+### Dlaczego konta sa domyslnie zablokowane
+
+Poprawne zalogowanie przez Google dowodzi **kim ktos jest**, a nie tego, ze
+**wolno mu** korzystac z tego systemu. Ekran zgody Google nie jest lista
+kontroli dostepu: wystarczy opublikowac aplikacje (External -> In production),
+zeby kazdy posiadacz konta Google, ktory trafi na adres, zalozyl sobie konto.
+
+Dlatego kontrola dostepu jest po stronie aplikacji i nie zalezy od ustawien w
+Google Cloud Console. Nowe konto pojawia sie w panelu **Uzytkownicy** z
+etykieta *brak dostepu* i ostrzezeniem u gory - Ty decydujesz, kto wejdzie.
+
+Zachowanie mozna zmienic zmienna `AUTO_ACTIVATE_NEW_USERS=true`, ale wtedy
+kazdy, kto przejdzie logowanie Google, dostaje od razu dostep do danych
+pracownikow. W produkcji zostaw `false`.
 
 Dalsze zmiany rol robi sie w panelu **Uzytkownicy**. System pilnuje, zeby
 zawsze zostal co najmniej jeden aktywny administrator, i nie pozwala odebrac

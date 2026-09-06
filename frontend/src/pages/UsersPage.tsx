@@ -13,13 +13,33 @@ export default function UsersPage() {
   if (error) return <ErrorBox error={error} />
 
   const meId = auth?.user?.id
+  // Accounts that authenticated with Google but were never granted access.
+  const pending = (data ?? []).filter((u) => !u.is_active)
 
   return (
     <>
       <PageHeader
         title="Uzytkownicy"
-        subtitle="Konta powstaja automatycznie przy pierwszym logowaniu przez Google. Hasla nie sa przechowywane."
+        subtitle="Konta powstaja automatycznie przy pierwszym logowaniu przez Google, ale bez dostepu - to Ty go przyznajesz przelacznikiem Aktywne. Hasla nie sa przechowywane."
       />
+
+      {pending.length > 0 && (
+        <div className="alert alert-warning d-flex align-items-start gap-2" role="alert">
+          <i className="bi bi-person-exclamation fs-5" />
+          <div>
+            <strong>
+              {pending.length === 1
+                ? 'Jedno konto czeka na zatwierdzenie'
+                : `Konta czekajace na zatwierdzenie: ${pending.length}`}
+            </strong>
+            <div className="small">
+              {pending.map((u) => u.email).join(', ')} - dopoki przelacznik
+              <em> Aktywne</em> jest wylaczony, te osoby nie widza zadnych danych.
+              Wlacz go tylko dla osob, ktore rzeczywiscie maja pracowac z grafikiem.
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="card shadow-sm">
         <div className="table-responsive">
@@ -40,6 +60,9 @@ export default function UsersPage() {
                     {user.email}
                     {user.id === meId && (
                       <span className="badge text-bg-primary ms-2">to Ty</span>
+                    )}
+                    {!user.is_active && (
+                      <span className="badge text-bg-warning ms-2">brak dostepu</span>
                     )}
                   </td>
                   <td>{user.name ?? '-'}</td>
