@@ -69,7 +69,24 @@ echo "== building images =="
 docker compose build
 
 echo "== starting (migrations run in the backend entrypoint) =="
-docker compose up -d --remove-orphans
+# tee keeps the progress visible; PIPESTATUS carries the real exit code, which
+# a plain pipe would swallow.
+set +e
+docker compose up -d --remove-orphans 2>&1 | tee /tmp/nurse-up.log
+up_code=${PIPESTATUS[0]}
+set -e
+if [ "$up_code" -ne 0 ]; then
+  if grep -q 'address already in use' /tmp/nurse-up.log; then
+    echo "ERROR: another service on this host already owns port 80 or 443." >&2
+    echo "  This stack ships its own nginx container, so a distribution web" >&2
+    echo "  server has to give the port back. Find the owner with:" >&2
+    echo "    ss -tlnp '( sport = :80 or sport = :443 )'" >&2
+    echo "  and disable it (disable, not just stop - it would return on reboot):" >&2
+    echo "    systemctl disable --now nginx" >&2
+    echo "    systemctl disable --now apache2" >&2
+  fi
+  exit "$up_code"
+fi
 
 # --- health ---------------------------------------------------------------
 # A container without a healthcheck only has to be running; one with a
