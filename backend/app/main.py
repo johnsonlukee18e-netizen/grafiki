@@ -43,6 +43,14 @@ async def lifespan(app: FastAPI):
         logger.warning(
             "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are not set - logging in will fail."
         )
+    # Google rejects the login with a bare "redirect_uri_mismatch" and never
+    # says which URI it received, so print the effective one here. It is not a
+    # secret - it travels in the query string of every authorization request.
+    logger.info(
+        "OAuth redirect URI (must match Google Console exactly): %s",
+        settings.google_redirect_uri or "<not set>",
+    )
+    logger.info("Frontend URL: %s", settings.frontend_url)
     yield
     logger.info("Shutting down")
 

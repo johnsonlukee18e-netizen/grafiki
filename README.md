@@ -216,8 +216,18 @@ docker compose up -d --force-recreate backend
 ```
 
 > Redirect URI **musi** zgadzac sie co do znaku - inaczej Google zwroci
-> `redirect_uri_mismatch`. Domena nie jest nigdzie zaszyta w kodzie:
-> pochodzi wylacznie ze zmiennej `GOOGLE_REDIRECT_URI`.
+> `redirect_uri_mismatch`. Backend wypisuje uzywana wartosc przy starcie,
+> wiec sprawdzisz ja bez zgadywania:
+>
+> ```bash
+> docker compose logs backend | grep 'OAuth redirect URI'
+> ```
+>
+> Uwaga: `docker compose restart` **nie czyta ponownie** `.env`. Po edycji
+> pliku uzyj `docker compose up -d --force-recreate backend`.
+>
+> Domena nie jest nigdzie zaszyta w kodzie - pochodzi wylacznie ze zmiennej
+> `GOOGLE_REDIRECT_URI`.
 
 ### Co robi backend
 
