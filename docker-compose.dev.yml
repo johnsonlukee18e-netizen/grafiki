@@ -1,0 +1,30 @@
+# Local development: only PostgreSQL runs in Docker.
+# Backend + frontend run on the host with hot reload.
+#
+# Its own project name keeps this stack completely separate from the
+# production one in docker-compose.yml - without it Compose would treat
+# both files as the same project and tear down the other one's containers.
+name: nurse-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nurse_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nurse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nurse}
+      POSTGRES_DB: ${POSTGRES_DB:-nurse}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nurse} -d ${POSTGRES_DB:-nurse}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_dev_data:
+    name: nurse_postgres_dev_data

@@ -1,0 +1,278 @@
+/* Minimal additions on top of Bootstrap 5 - no extra UI framework. */
+
+:root {
+  --nurse-sidebar-width: 236px;
+  --nurse-red: #dc3545;
+  --nurse-yellow: #ffc107;
+  --nurse-green: #198754;
+  --nurse-purple: #6f42c1;
+  --nurse-weekend: #eef1f5;
+  --nurse-holiday: #fde2e4;
+}
+
+body {
+  background-color: #f6f7f9;
+  font-size: 0.94rem;
+}
+
+/* --- layout -------------------------------------------------------------- */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: var(--nurse-sidebar-width);
+  flex: 0 0 var(--nurse-sidebar-width);
+  background: #1f2937;
+  color: #d1d5db;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.app-sidebar .nav-link {
+  color: #cbd5e1;
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.app-sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.app-sidebar .nav-link.active {
+  background: #0d6efd;
+  color: #fff;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 991.98px) {
+  .app-shell {
+    flex-direction: column;
+  }
+  .app-sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+    height: auto;
+    position: static;
+  }
+}
+
+/* --- employee colour dot -------------------------------------------------- */
+.color-dot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.color-RED { background: var(--nurse-red); }
+.color-YELLOW { background: var(--nurse-yellow); }
+.color-GREEN { background: var(--nurse-green); }
+.color-PURPLE { background: var(--nurse-purple); }
+
+.color-bar {
+  display: inline-block;
+  width: 4px;
+  height: 1.15rem;
+  border-radius: 2px;
+  margin-right: 0.45rem;
+  vertical-align: -0.2rem;
+}
+
+/* --- schedule grid ------------------------------------------------------- */
+.schedule-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8rem;
+  margin-bottom: 0;
+}
+
+.schedule-table th,
+.schedule-table td {
+  border: 1px solid #dee2e6;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.schedule-table thead th {
+  background: #212529;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  font-weight: 600;
+  padding: 0.25rem 0.35rem;
+}
+
+.schedule-table .name-cell {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  min-width: 190px;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.schedule-table thead .name-cell {
+  z-index: 4;
+  background: #212529;
+  color: #fff;
+}
+
+.schedule-table td.day-cell {
+  width: 34px;
+  min-width: 34px;
+  height: 30px;
+  cursor: pointer;
+  position: relative;
+}
+
+.schedule-table td.weekend,
+.schedule-table th.weekend {
+  background-color: var(--nurse-weekend);
+}
+
+.schedule-table td.holiday,
+.schedule-table th.holiday {
+  background-color: var(--nurse-holiday);
+}
+
+.schedule-table td.day-cell.drag-over {
+  outline: 2px solid #0d6efd;
+  outline-offset: -2px;
+}
+
+.schedule-table td.day-cell.dragging .shift-chip {
+  opacity: 0.4;
+}
+
+.shift-chip {
+  display: block;
+  width: 100%;
+  height: 100%;
+  line-height: 30px;
+  font-weight: 600;
+  cursor: grab;
+  user-select: none;
+}
+
+.shift-chip.manual::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #0d6efd;
+}
+
+.shift-D { background: #cfe2ff; color: #084298; }
+.shift-R { background: #d1e7dd; color: #0a3622; }
+.shift-N { background: #e2d9f3; color: #3d1e6d; }
+.shift-W { color: #adb5bd; font-weight: 400; }
+
+.unavailable-cell {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(220, 53, 69, 0.16),
+    rgba(220, 53, 69, 0.16) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.preferred-cell::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fd7e14;
+}
+
+.coverage-row td {
+  font-size: 0.7rem;
+  color: #6c757d;
+  background: #f8f9fa;
+}
+
+.coverage-row td.short {
+  background: #f8d7da;
+  color: #842029;
+  font-weight: 700;
+}
+
+/* --- misc ---------------------------------------------------------------- */
+.check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.check-row:last-child {
+  border-bottom: none;
+}
+
+.toast-stack {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1080;
+  max-width: 520px;
+}
+
+.availability-calendar .fc {
+  font-size: 0.85rem;
+}
+
+.availability-calendar .fc-daygrid-day.selected-day {
+  background: #cfe2ff;
+}
+
+.availability-calendar .fc-daygrid-day-frame {
+  cursor: pointer;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 1.4rem;
+  height: 1.1rem;
+  border-radius: 3px;
+  border: 1px solid #dee2e6;
+  vertical-align: -0.2rem;
+  margin-right: 0.3rem;
+}
+
+.table-sticky-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
