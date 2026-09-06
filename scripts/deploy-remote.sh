@@ -15,7 +15,9 @@ cd "$APP_DIR"
 
 echo "== backup before deploy =="
 # A failing backup stops the deployment rather than being ignored.
-./scripts/backup.sh
+# Invoked through bash so a checkout that lost the executable bit (Windows
+# commits do not record it) still deploys instead of dying with exit 126.
+bash ./scripts/backup.sh
 
 echo "== fetching $GIT_REF =="
 git fetch --all --prune
