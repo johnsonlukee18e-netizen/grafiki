@@ -127,11 +127,18 @@ jobs:
           # so it is reviewable and runnable by hand on the server.
           # BatchMode makes a missing/locked key fail fast instead of hanging
           # on an interactive password prompt.
-          if ! ssh -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=15 \
-                 "$SSH_USER@$SSH_HOST" \
-                 "APP_DIR='${DEPLOY_PATH:-/opt/nurse-scheduler}' GIT_REF='$GIT_REF' bash -s" \
-                 < scripts/deploy-remote.sh; then
-            code=$?
+          # Capture the real exit code. Inside `if ! cmd; then` $? would be the
+          # status of the negation (always 0), which would report a failed
+          # deployment as a successful one.
+          set +e
+          ssh -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_USER@$SSH_HOST" \
+            "APP_DIR='${DEPLOY_PATH:-/opt/nurse-scheduler}' GIT_REF='$GIT_REF' bash -s" \
+            < scripts/deploy-remote.sh
+          code=$?
+          set -e
+
+          if [ "$code" -ne 0 ]; then
             if [ "$code" = "255" ]; then
               echo "::error::SSH refused the deploy key (see the message above)."
               echo "  On the VPS, as the DEPLOY_USER account, check that:"
