@@ -46,24 +46,86 @@ jobs:
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
+          set -euo pipefail
+
+          # Secrets are routinely pasted with a stray newline, an https:// prefix
+          # or as "user@host:port". Normalise them here - otherwise ssh only says
+          # "hostname contains invalid characters" and never names the culprit.
+          trim() { printf '%s' "$1" | tr -d '\r\n\t' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'; }
+
+          host="$(trim "$DEPLOY_HOST")"
+          user="$(trim "$DEPLOY_USER")"
+          port="$(trim "${DEPLOY_PORT:-}")"
+
+          host="${host#ssh://}"; host="${host#https://}"; host="${host#http://}"
+          host="${host%%/*}"                                   # drop any path
+          case "$host" in *@*) user="${host%@*}"; host="${host##*@}" ;; esac
+          case "$host" in *:*) port="${host##*:}"; host="${host%%:*}" ;; esac
+          port="$(trim "${port:-22}")"
+
+          # Diagnostics never print the value itself, only its shape.
+          if ! printf '%s' "$host" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9.-]*$'; then
+            echo "::error::DEPLOY_HOST is not a plain hostname or IP address."
+            echo "  length after cleanup: ${#host}"
+            for probe in ' ' '/' ':' '@' '\' '"' "'" '_'; do
+              case "$host" in *"$probe"*) echo "  still contains: [$probe]" ;; esac
+            done
+            echo "  expected e.g. 203.0.113.10 or vps.example.com"
+            echo "  (no https://, no user@, no :port, no quotes, no trailing spaces)"
+            exit 1
+          fi
+          if ! printf '%s' "$port" | grep -Eq '^[0-9]+$'; then
+            echo "::error::DEPLOY_PORT must be a number (leave the secret empty for 22)."
+            exit 1
+          fi
+          if [ -z "$user" ]; then
+            echo "::error::DEPLOY_USER is empty after trimming whitespace."
+            exit 1
+          fi
+
+          # Re-mask the normalised values so they cannot leak into later logs.
+          echo "::add-mask::$host"
+          echo "::add-mask::$user"
+          { echo "SSH_HOST=$host"; echo "SSH_USER=$user"; echo "SSH_PORT=$port"; } >> "$GITHUB_ENV"
+
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          if ! ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null 2>&1; then
+            echo "::error::DEPLOY_SSH_KEY is not a usable private key."
+            echo "  Paste the PRIVATE key file whole, including the"
+            echo "  -----BEGIN OPENSSH PRIVATE KEY----- and -----END ...----- lines,"
+            echo "  and make sure it has no passphrase."
+            exit 1
+          fi
+
+          # A failure here means the server is unreachable - do not hide it.
+          ssh-keyscan -p "$port" -H "$host" > ~/.ssh/known_hosts 2>/tmp/keyscan.err || true
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::No SSH server answered on port $port."
+            echo "  Check DEPLOY_HOST, DEPLOY_PORT and the firewall on the VPS."
+            sed 's/^/  /' /tmp/keyscan.err || true
+            exit 1
+          fi
 
       - name: Deploy
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           GIT_REF: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           # The remote script lives in the repository (scripts/deploy-remote.sh)
           # so it is reviewable and runnable by hand on the server.
-          ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST"             "APP_DIR='${DEPLOY_PATH:-/opt/nurse-scheduler}' GIT_REF='$GIT_REF' bash -s"             < scripts/deploy-remote.sh
+          # BatchMode makes a missing/locked key fail fast instead of hanging
+          # on an interactive password prompt.
+          ssh -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_USER@$SSH_HOST" \
+            "APP_DIR='${DEPLOY_PATH:-/opt/nurse-scheduler}' GIT_REF='$GIT_REF' bash -s" \
+            < scripts/deploy-remote.sh
 
       - name: Remove SSH key
         if: always()
