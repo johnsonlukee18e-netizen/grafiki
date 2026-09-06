@@ -445,12 +445,17 @@ istniejaca baze.
 
 ```bash
 cd /opt/nurse-scheduler
-./scripts/backup.sh              # najpierw kopia
-git pull
+./scripts/backup.sh                        # najpierw kopia
+git fetch origin && git checkout -B main origin/main
 docker compose build
 docker compose up -d
-docker compose logs -f backend   # migracje wykonaja sie automatycznie
+docker compose logs -f backend             # migracje wykonaja sie automatycznie
 ```
+
+> Dlaczego nie `git pull`: wdrozenie przypina dokladny commit przez
+> `git checkout --detach`, wiec repozytorium na serwerze nie stoi na galezi i
+> `git pull` konczy sie komunikatem *"You are not currently on a branch"*.
+> `git checkout -B main origin/main` dziala w obu przypadkach.
 
 Wycofanie do poprzedniej wersji:
 
