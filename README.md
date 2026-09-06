@@ -21,15 +21,16 @@ z bledem twardego ograniczenia **nie moze** zostac zatwierdzony.
 4. [Konfiguracja Google OAuth](#konfiguracja-google-oauth)
 5. [Zmienne srodowiskowe](#zmienne-srodowiskowe)
 6. [HTTPS i domena](#https-i-domena)
-7. [Pierwszy administrator](#pierwszy-administrator)
-8. [Kopie zapasowe](#kopie-zapasowe)
-9. [Aktualizacja](#aktualizacja)
-10. [Praca lokalna (development)](#praca-lokalna-development)
-11. [Testy](#testy)
-12. [CI/CD - wdrozenie z GitHuba](#cicd---wdrozenie-z-githuba)
-13. [Struktura projektu](#struktura-projektu)
-14. [API](#api)
-15. [Decyzje projektowe i ograniczenia](#decyzje-projektowe-i-ograniczenia)
+7. [Wariant: wlasny nginx na hoscie](#wariant-wlasny-nginx-na-hoscie)
+8. [Pierwszy administrator](#pierwszy-administrator)
+9. [Kopie zapasowe](#kopie-zapasowe)
+10. [Aktualizacja](#aktualizacja)
+11. [Praca lokalna (development)](#praca-lokalna-development)
+12. [Testy](#testy)
+13. [CI/CD - wdrozenie z GitHuba](#cicd---wdrozenie-z-githuba)
+14. [Struktura projektu](#struktura-projektu)
+15. [API](#api)
+16. [Decyzje projektowe i ograniczenia](#decyzje-projektowe-i-ograniczenia)
 
 ---
 
@@ -290,6 +291,86 @@ Nginx wymusza HTTPS (301 z portu 80), wlacza HSTS i komplet naglowkow
 bezpieczenstwa (CSP, `X-Content-Type-Options`, `Referrer-Policy`,
 `X-Frame-Options`, `Permissions-Policy`) oraz `limit_req` na `/api/`
 i - ostrzej - na `/api/auth/`.
+
+---
+
+## Wariant: wlasny nginx na hoscie
+
+Jezeli na serwerze **juz dziala nginx** obslugujacy inne strony, nie wylaczaj
+go. Zamiast tego przelacz stack w tryb "za obcym proxy": dolaczony nginx
+przestaje zajmowac porty 80/443 i nasluchuje wylacznie na petli zwrotnej, a
+Twoj nginx terminuje TLS i przekazuje ruch dalej.
+
+Routing `/api`, naglowki bezpieczenstwa i limity zapytan zostaja wtedy w
+repozytorium (wersjonowane razem z kodem), a na hoscie dokladasz jeden krotki
+server block.
+
+### 1. Wlacz tryb w `.env`
+
+```bash
+TLS_TERMINATION=host
+APP_PORT=8080
+COMPOSE_FILE=docker-compose.yml:docker-compose.behind-proxy.yml
+```
+
+`COMPOSE_FILE` czyta samo Compose, wiec zwykle `docker compose up -d` oraz
+wdrozenie z GitHuba automatycznie uzyja nakladki. Certyfikaty w
+`nginx/certs/` przestaja byc potrzebne - naleza teraz do hosta.
+
+```bash
+docker compose up -d
+curl -s http://127.0.0.1:8080/api/health
+# {"status":"ok","database":"ok","env":"production"}
+```
+
+### 2. Dodaj server block na hoscie
+
+Gotowy przyklad: [`docs/nginx-host-example.conf`](docs/nginx-host-example.conf).
+Minimum, ktore musi sie w nim znalezc:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_read_timeout 180s;   # generowanie grafiku trwa
+    proxy_send_timeout 180s;
+}
+```
+
+Trzy rzeczy, ktore psuja sie po cichu, jesli ich zabraknie:
+
+- **`X-Forwarded-Proto https`** - bez tego backend uzna polaczenie za
+  nieszyfrowane i ciasteczko sesji z `Secure=true` nigdy sie nie utrwali,
+  czyli logowanie bedzie sie "udawac" i od razu wygasac;
+- **`proxy_read_timeout`** - domyslne 60 s nginxa utnie generowanie grafiku
+  dokladnie wtedy, gdy solver dostanie pelny budzet czasu;
+- **`X-Forwarded-For`** - kontenerowy nginx odtwarza z niego prawdziwy adres
+  klienta (`set_real_ip_from` w szablonie). Bez tego naglowka wszyscy
+  uzytkownicy trafiliby do jednego wspolnego licznika limitu zapytan.
+
+### 3. Cloudflare
+
+Domena za pomaranczowa chmurka wymaga jeszcze trzech rzeczy - szczegoly i
+gotowe fragmenty konfiguracji sa w komentarzach
+[`docs/nginx-host-example.conf`](docs/nginx-host-example.conf):
+
+- przywrocenia prawdziwego IP klienta (`real_ip_header CF-Connecting-IP` plus
+  zakresy adresow Cloudflare),
+- swiadomosci, ze **Cloudflare przerywa zadanie po 100 s** i pokazuje blad
+  524. Domyslny `SOLVER_TIME_LIMIT_SECONDS=60` miesci sie w tym limicie, ale
+  podniesienie go powyzej okolo 90 s sprawi, ze generowanie grafiku bedzie
+  sie wywalac w przegladarce, mimo ze solver dalej liczy na serwerze,
+- trybu SSL **Full (strict)**. Tryb "Flexible" sprawia, ze Cloudflare laczy
+  sie z serwerem po zwyklym HTTP - backend zobaczy `X-Forwarded-Proto: http`
+  i logowanie nie zadziala z tego samego powodu co wyzej.
+
+Rekord AAAA (IPv6) wymaga `listen [::]:443 ssl;` w server bloku - blok tylko
+dla IPv4 nigdy nie zostanie osiagniety.
 
 ---
 

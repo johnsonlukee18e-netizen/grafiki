@@ -54,9 +54,16 @@ fi
 git checkout --detach "$GIT_REF"
 
 # --- TLS ------------------------------------------------------------------
+# Read one setting without sourcing .env (which would execute it).
+TLS_TERMINATION="$(sed -n 's/^[[:space:]]*TLS_TERMINATION[[:space:]]*=[[:space:]]*//p' .env \
+                   | tail -1 | tr -d '"'"'"'[:space:]')"
+TLS_TERMINATION="${TLS_TERMINATION:-container}"
+
+if [ "$TLS_TERMINATION" = "host" ]; then
+  echo "== TLS is terminated by the host proxy - skipping the certificate check =="
 # nginx refuses to start without them, and it would fail long after the
 # backend looked fine - say so up front instead.
-if [ ! -s nginx/certs/fullchain.pem ] || [ ! -s nginx/certs/privkey.pem ]; then
+elif [ ! -s nginx/certs/fullchain.pem ] || [ ! -s nginx/certs/privkey.pem ]; then
   echo "ERROR: TLS certificate missing in $APP_DIR/nginx/certs/." >&2
   echo "  Expected fullchain.pem and privkey.pem (see README -> HTTPS i domena)." >&2
   echo "  For a first smoke test a self-signed pair is enough:" >&2

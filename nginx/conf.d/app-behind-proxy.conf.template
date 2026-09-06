@@ -1,0 +1,89 @@
+# Variant for a host that already runs its own nginx (or any other reverse
+# proxy). TLS, the HTTP->HTTPS redirect and the public certificate belong to
+# that proxy; this container only listens on plain HTTP on the loopback
+# interface and keeps the application routing, CSP and rate limits versioned
+# with the code.
+#
+# Enable it with docker-compose.behind-proxy.yml - see README, section
+# "Wariant: wlasny nginx na hoscie".
+
+upstream backend_api {
+    server backend:8000;
+    keepalive 16;
+}
+
+upstream frontend_app {
+    server frontend:80;
+    keepalive 16;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    # Every request arrives from the host proxy, so without this $remote_addr
+    # would be the docker gateway for all of them and the rate limiters below
+    # would throttle every user out of one shared bucket.
+    set_real_ip_from 127.0.0.1;
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+
+    # HSTS is intentionally absent: the host proxy owns the TLS relationship
+    # with the browser and must set it, otherwise it would be sent over a
+    # connection that is plain HTTP from nginx's point of view.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), interest-cohort=()" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'" always;
+
+    location /api/ {
+        limit_req zone=api burst=30 nodelay;
+        proxy_pass http://backend_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # $forwarded_scheme comes from the host proxy's X-Forwarded-Proto; the
+        # backend needs it to know the session cookie may be marked Secure.
+        proxy_set_header X-Forwarded-Proto $forwarded_scheme;
+        proxy_read_timeout 180s;   # OR-Tools may run for a while
+        proxy_send_timeout 180s;
+    }
+
+    location /api/auth/ {
+        limit_req zone=auth burst=10 nodelay;
+        proxy_pass http://backend_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_scheme;
+    }
+
+    location ~ ^/api/(docs|redoc|openapi\.json)$ {
+        return 404;
+    }
+
+    location / {
+        proxy_pass http://frontend_app;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_scheme;
+    }
+
+    location = /nginx-health {
+        access_log off;
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+}
