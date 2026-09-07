@@ -365,22 +365,76 @@ Trzy rzeczy, ktore psuja sie po cichu, jesli ich zabraknie:
 
 ### 3. Cloudflare
 
-Domena za pomaranczowa chmurka wymaga jeszcze trzech rzeczy - szczegoly i
-gotowe fragmenty konfiguracji sa w komentarzach
-[`docs/nginx-host-example.conf`](docs/nginx-host-example.conf):
+Za pomaranczowa chmurka istnieja **dwa odcinki TLS** i mylenie ich jest
+najczestszym zrodlem klopotow:
 
-- przywrocenia prawdziwego IP klienta (`real_ip_header CF-Connecting-IP` plus
-  zakresy adresow Cloudflare),
-- swiadomosci, ze **Cloudflare przerywa zadanie po 100 s** i pokazuje blad
-  524. Domyslny `SOLVER_TIME_LIMIT_SECONDS=60` miesci sie w tym limicie, ale
-  podniesienie go powyzej okolo 90 s sprawi, ze generowanie grafiku bedzie
-  sie wywalac w przegladarce, mimo ze solver dalej liczy na serwerze,
-- trybu SSL **Full (strict)**. Tryb "Flexible" sprawia, ze Cloudflare laczy
-  sie z serwerem po zwyklym HTTP - backend zobaczy `X-Forwarded-Proto: http`
-  i logowanie nie zadziala z tego samego powodu co wyzej.
+```
+przegladarka  --(1)-->  Cloudflare  --(2)-->  Twoj serwer
+```
 
-Rekord AAAA (IPv6) wymaga `listen [::]:443 ssl;` w server bloku - blok tylko
-dla IPv4 nigdy nie zostanie osiagniety.
+Odcinek **(1)** zabezpiecza certyfikat Cloudflare - zaufany, nic nie robisz.
+Odcinek **(2)** zabezpiecza certyfikat **na Twoim serwerze**. To wlasnie jego
+widza narzedzia, ktore lacza sie z serwerem bezposrednio - i to on bywa
+raportowany jako self-signed.
+
+#### Tryb szyfrowania (SSL/TLS -> Overview)
+
+| Tryb | Skutek |
+| ---- | ------ |
+| `Flexible` | **Nigdy.** Cloudflare laczy sie z serwerem po zwyklym HTTP, backend widzi `X-Forwarded-Proto: http`, nie uzna polaczenia za bezpieczne i **logowanie nie bedzie sie utrzymywac**. |
+| `Full` | Szyfrowane, ale certyfikat serwera **nie jest sprawdzany** - certyfikat samopodpisany "dziala" i dokladnie stad biora sie zgloszenia o niezaufanym certyfikacie. |
+| `Full (strict)` | **Wlasciwy wybor.** Wymaga prawdziwego certyfikatu na serwerze. |
+
+#### Certyfikat na serwerze - dwie opcje
+
+- **Cloudflare Origin CA** (SSL/TLS -> Origin Server -> Create Certificate):
+  darmowy, wazny 15 lat, bez odnawiania. Zaufany przez Cloudflare, ale **nie
+  przez przegladarki** - cokolwiek siega serwera z pominieciem Cloudflare
+  nadal zobaczy certyfikat niezaufany.
+- **Let's Encrypt**: zaufany przez wszystkich, wymaga odnawiania. Dziala za
+  pomaranczowa chmurka, bo Cloudflare przepuszcza wyzwanie HTTP-01.
+
+Jesli inne systemy odpytuja ten serwer bezposrednio, wybierz **Let's Encrypt** -
+Origin CA nie rozwiaze zgloszen o self-signed poza Cloudflare.
+
+Certyfikat samopodpisany ze `scripts/dev-certs.sh` jest wylacznie do pierwszego
+uruchomienia. Nie zostawiaj go na produkcji.
+
+#### Prawdziwy adres uzytkownika
+
+Bez tego `$remote_addr` jest adresem Cloudflare przy **kazdym** zadaniu, wiec
+wszyscy uzytkownicy trafiaja do jednego wspolnego licznika limitu zapytan, a w
+logu widnieje proxy zamiast klienta. Gotowy plik jest w repozytorium:
+
+```bash
+sudo cp nginx/cloudflare-real-ip.conf /etc/nginx/conf.d/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Cloudflare czasem dokłada nowe zakresy - odswiez je i przeladuj nginx:
+
+```bash
+./scripts/update-cloudflare-ips.sh
+```
+
+#### Limit czasu
+
+Cloudflare przerywa zadanie po **100 sekundach** i pokazuje blad 524.
+Domyslny `SOLVER_TIME_LIMIT_SECONDS=60` miesci sie w limicie, ale podniesienie
+go powyzej okolo 90 s sprawi, ze generowanie grafiku bedzie sie wywalac w
+przegladarce, mimo ze solver dalej liczy na serwerze.
+
+#### IPv6
+
+Rekord AAAA wymaga `listen [::]:443 ssl;` w server bloku - blok tylko dla
+IPv4 nigdy nie zostanie osiagniety.
+
+#### Opcjonalne domkniecie
+
+Gdy wszystko dziala: **Authenticated Origin Pulls** (SSL/TLS -> Origin Server)
+plus firewall przyjmujacy port 443 tylko z zakresow Cloudflare. Wtedy nikt nie
+dosiegnie serwera inaczej niz przez Cloudflare i pytanie o certyfikat origin
+przestaje byc widoczne z zewnatrz.
 
 ---
 

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Generate a self-signed certificate so the full HTTPS stack can be tested
-# locally. NEVER use these files in production - use Let's Encrypt (see README).
+# Generate a self-signed certificate so the full HTTPS stack can start for the
+# first time.
+#
+# NEVER leave these files in production. A self-signed certificate is exactly
+# what makes monitoring and other systems report the site as untrusted, and
+# Cloudflare's "Full (strict)" mode refuses it outright. Replace it with
+# Let's Encrypt or a Cloudflare Origin CA certificate - see README, section
+# "HTTPS i domena" and the Cloudflare notes in docs/nginx-host-example.conf.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
