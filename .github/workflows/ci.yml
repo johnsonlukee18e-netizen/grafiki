@@ -148,6 +148,5 @@ jobs:
           sed -i 's|^SESSION_SECRET=.*|SESSION_SECRET=ci-placeholder-secret-at-least-32-characters|' .env
           sed -i 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=ci-placeholder|' .env
           sed -i 's|^FRONTEND_URL=.*|FRONTEND_URL=https://example.test|' .env
-          sed -i 's|^SERVER_NAME=.*|SERVER_NAME=example.test|' .env
           docker compose config --quiet
           rm .env

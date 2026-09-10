@@ -20,17 +20,16 @@ z bledem twardego ograniczenia **nie moze** zostac zatwierdzony.
 3. [Szybki start (VPS, Docker)](#szybki-start-vps-docker)
 4. [Konfiguracja Google OAuth](#konfiguracja-google-oauth)
 5. [Zmienne srodowiskowe](#zmienne-srodowiskowe)
-6. [HTTPS i domena](#https-i-domena)
-7. [Wariant: wlasny nginx na hoscie](#wariant-wlasny-nginx-na-hoscie)
-8. [Pierwszy administrator](#pierwszy-administrator)
-9. [Kopie zapasowe](#kopie-zapasowe)
-10. [Aktualizacja](#aktualizacja)
-11. [Praca lokalna (development)](#praca-lokalna-development)
-12. [Testy](#testy)
-13. [CI/CD - wdrozenie z GitHuba](#cicd---wdrozenie-z-githuba)
-14. [Struktura projektu](#struktura-projektu)
-15. [API](#api)
-16. [Decyzje projektowe i ograniczenia](#decyzje-projektowe-i-ograniczenia)
+6. [Reverse proxy i TLS (VPS)](#reverse-proxy-i-tls-vps)
+7. [Pierwszy administrator](#pierwszy-administrator)
+8. [Kopie zapasowe](#kopie-zapasowe)
+9. [Aktualizacja](#aktualizacja)
+10. [Praca lokalna (development)](#praca-lokalna-development)
+11. [Testy](#testy)
+12. [CI/CD - wdrozenie z GitHuba](#cicd---wdrozenie-z-githuba)
+13. [Struktura projektu](#struktura-projektu)
+14. [API](#api)
+15. [Decyzje projektowe i ograniczenia](#decyzje-projektowe-i-ograniczenia)
 
 ---
 
@@ -44,7 +43,7 @@ z bledem twardego ograniczenia **nie moze** zostac zatwierdzony.
 | PDF       | ReportLab (A4 poziomo)                                                       |
 | Baza      | PostgreSQL 16 (wylacznie - bez SQLite)                                       |
 | Logowanie | Google OAuth 2.0 / OpenID Connect (bez hasel)                                |
-| Wdrozenie | Docker Compose: nginx + frontend + backend + postgres                        |
+| Wdrozenie | Docker Compose: backend + frontend + postgres; TLS i domena - reverse proxy na VPS |
 
 ---
 
@@ -131,22 +130,16 @@ openssl rand -hex 24          # wynik wklej do POSTGRES_PASSWORD
 nano .env
 ```
 
-Uzupelnij co najmniej: `POSTGRES_PASSWORD`, `SESSION_SECRET`, `SERVER_NAME`,
+Uzupelnij co najmniej: `POSTGRES_PASSWORD`, `SESSION_SECRET`,
 `FRONTEND_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `GOOGLE_REDIRECT_URI`, `INITIAL_ADMIN_EMAILS`.
 
-> `.env` nigdy nie trafia do repozytorium - jest w `.gitignore`.
+> `.env` nigdy nie trafia do repozytorium - jest w `.gitignore`. Ten krok
+> jeszcze nie dotyczy domeny ani certyfikatu - stack sam nigdy nie terminuje
+> TLS, wiec zajmiesz sie tym w kroku [Reverse proxy i TLS](#reverse-proxy-i-tls-vps),
+> po pierwszym uruchomieniu.
 
-### 4. Certyfikat TLS
-
-Zobacz [HTTPS i domena](#https-i-domena). Do pierwszego uruchomienia mozna
-wygenerowac certyfikat testowy:
-
-```bash
-./scripts/dev-certs.sh twoja-domena.pl
-```
-
-### 5. Zbuduj i uruchom
+### 4. Zbuduj i uruchom
 
 ```bash
 docker compose build
@@ -158,14 +151,16 @@ Migracje Alembic uruchamiaja sie **automatycznie** przy starcie kontenera
 `backend` (`SEED_ON_START=true` dodaje takze zmiany D/R/N, konfiguracje
 oddzialu i polskie swieta).
 
-### 6. Sprawdz
+### 5. Sprawdz
 
 ```bash
-curl -k https://twoja-domena.pl/api/health
+curl -s http://127.0.0.1:${BACKEND_PORT:-8000}/api/health
 # {"status":"ok","database":"ok","env":"production"}
 ```
 
-Otworz `https://twoja-domena.pl` i zaloguj sie przez Google.
+To sprawdza backend bezposrednio na loopbacku, z pominieciem reverse proxy -
+na tym etapie strona nie jest jeszcze widoczna publicznie. Zobacz
+[Reverse proxy i TLS](#reverse-proxy-i-tls-vps), zeby wystawic ja pod domena.
 
 ### Recznie uruchamiane operacje
 
@@ -253,7 +248,7 @@ Pelna lista z komentarzami: [`.env.example`](.env.example).
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | dane klienta OAuth |
 | `GOOGLE_REDIRECT_URI` | musi byc identyczne z wpisem w Google Console |
 | `GOOGLE_ALLOWED_DOMAIN` | opcjonalne ograniczenie do jednej domeny Workspace |
-| `SERVER_NAME` | domena obslugiwana przez nginx |
+| `BACKEND_PORT` / `FRONTEND_PORT` | porty publikowane na `127.0.0.1` dla reverse proxy na hoscie |
 | `FRONTEND_URL` | adres SPA (uzywany przy przekierowaniach i CORS) |
 | `INITIAL_ADMIN_EMAILS` | e-maile, ktore przy pierwszym logowaniu dostaja role ADMIN |
 | `SOLVER_TIME_LIMIT_SECONDS` | budzet czasu solvera (domyslnie 60 s) |
@@ -265,149 +260,108 @@ W repozytorium nie ma i nie moze byc zadnych rzeczywistych wartosci.
 
 ---
 
-## HTTPS i domena
+## Reverse proxy i TLS (VPS)
 
-1. Skieruj rekord `A` domeny na adres IP serwera.
-2. Otworz porty 80 i 443 (`ufw allow 80,443/tcp`).
-3. Wystaw certyfikat Let's Encrypt:
+Ten stack **nigdy nie wiaze sie z portem 80 ani 443 i nigdy nie terminuje
+TLS**. `docker compose up -d` publikuje wylacznie:
 
-```bash
-# stack musi dzialac, bo nginx serwuje /.well-known/acme-challenge
-docker compose up -d
-
-docker run --rm \
-  -v nurse_certbot_www:/var/www/certbot \
-  -v /etc/letsencrypt:/etc/letsencrypt \
-  certbot/certbot certonly --webroot -w /var/www/certbot \
-  -d twoja-domena.pl --agree-tos -m admin@twoja-domena.pl --no-eff-email
+```
+backend  -> 127.0.0.1:${BACKEND_PORT:-8000}
+frontend -> 127.0.0.1:${FRONTEND_PORT:-8080}
 ```
 
-4. Podepnij certyfikaty (nginx czyta `nginx/certs/fullchain.pem`
-   i `nginx/certs/privkey.pem`):
+czyli tylko na petli zwrotnej - z zewnatrz nieosiagalne. Publiczna domene,
+HTTPS i certyfikat zapewnia reverse proxy, ktory **juz dziala na Twoim
+VPS**, a certyfikat dla przegladarki wystawia Cloudflare. Nie ma tu wlasnego
+kontenera nginx do zarzadzania ani certyfikatu do odnawiania.
 
-```bash
-sudo ln -sf /etc/letsencrypt/live/twoja-domena.pl/fullchain.pem nginx/certs/fullchain.pem
-sudo ln -sf /etc/letsencrypt/live/twoja-domena.pl/privkey.pem   nginx/certs/privkey.pem
-docker compose restart nginx
-```
-
-5. Automatyczne odnawianie (cron roota):
-
-```cron
-0 3 * * 1 docker run --rm -v nurse_certbot_www:/var/www/certbot -v /etc/letsencrypt:/etc/letsencrypt certbot/certbot renew --webroot -w /var/www/certbot --quiet && cd /opt/nurse-scheduler && docker compose restart nginx
-```
-
-Nginx wymusza HTTPS (301 z portu 80), wlacza HSTS i komplet naglowkow
-bezpieczenstwa (CSP, `X-Content-Type-Options`, `Referrer-Policy`,
-`X-Frame-Options`, `Permissions-Policy`) oraz `limit_req` na `/api/`
-i - ostrzej - na `/api/auth/`.
-
----
-
-## Wariant: wlasny nginx na hoscie
-
-Jezeli na serwerze **juz dziala nginx** obslugujacy inne strony, nie wylaczaj
-go. Zamiast tego przelacz stack w tryb "za obcym proxy": dolaczony nginx
-przestaje zajmowac porty 80/443 i nasluchuje wylacznie na petli zwrotnej, a
-Twoj nginx terminuje TLS i przekazuje ruch dalej.
-
-Routing `/api`, naglowki bezpieczenstwa i limity zapytan zostaja wtedy w
-repozytorium (wersjonowane razem z kodem), a na hoscie dokladasz jeden krotki
-server block.
-
-### 1. Wlacz tryb w `.env`
-
-```bash
-TLS_TERMINATION=host
-APP_PORT=8080
-COMPOSE_FILE=docker-compose.yml:docker-compose.behind-proxy.yml
-```
-
-`COMPOSE_FILE` czyta samo Compose, wiec zwykle `docker compose up -d` oraz
-wdrozenie z GitHuba automatycznie uzyja nakladki. Certyfikaty w
-`nginx/certs/` przestaja byc potrzebne - naleza teraz do hosta.
-
-```bash
-docker compose up -d
-curl -s http://127.0.0.1:8080/api/health
-# {"status":"ok","database":"ok","env":"production"}
-```
-
-### 2. Dodaj server block na hoscie
+### 1. Dodaj server block na hoscie
 
 Gotowy przyklad: [`docs/nginx-host-example.conf`](docs/nginx-host-example.conf).
-Minimum, ktore musi sie w nim znalezc:
+Skopiuj go, podmien domene, wlacz i przeladuj:
+
+```bash
+sudo cp docs/nginx-host-example.conf /etc/nginx/sites-available/grafiki
+sudo ln -s /etc/nginx/sites-available/grafiki /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Minimum, ktore musi sie w nim znalezc - **bez TLS**, bo o to dba Cloudflare:
 
 ```nginx
-location / {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_http_version 1.1;
-    proxy_set_header Connection "";
-    proxy_set_header Host              $host;
-    proxy_set_header X-Real-IP         $remote_addr;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto https;
-    proxy_read_timeout 180s;   # generowanie grafiku trwa
-    proxy_send_timeout 180s;
+server {
+    listen 80;
+    server_name grafiki.twoja-domena.pl;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 180s;   # generowanie grafiku trwa
+        proxy_send_timeout 180s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
 }
 ```
 
-Trzy rzeczy, ktore psuja sie po cichu, jesli ich zabraknie:
+Dwie rzeczy, ktore psuja sie po cichu, jesli ich zabraknie:
 
-- **`X-Forwarded-Proto https`** - bez tego backend uzna polaczenie za
-  nieszyfrowane i ciasteczko sesji z `Secure=true` nigdy sie nie utrwali,
-  czyli logowanie bedzie sie "udawac" i od razu wygasac;
 - **`proxy_read_timeout`** - domyslne 60 s nginxa utnie generowanie grafiku
   dokladnie wtedy, gdy solver dostanie pelny budzet czasu;
-- **`X-Forwarded-For`** - kontenerowy nginx odtwarza z niego prawdziwy adres
-  klienta (`set_real_ip_from` w szablonie). Bez tego naglowka wszyscy
-  uzytkownicy trafiliby do jednego wspolnego licznika limitu zapytan.
+- **`X-Forwarded-For` ustawiony na `$remote_addr`** (nie dopisany przez
+  `$proxy_add_x_forwarded_for`) - inaczej klient moze sam wstrzyknac ten
+  naglowek i podszyc sie pod kogos innego wobec limitu zapytan i dziennika
+  zdarzen backendu.
 
-### 3. Cloudflare
+### 2. Cloudflare: tryb `Flexible`, bez wlasnego certyfikatu
 
-Za pomaranczowa chmurka istnieja **dwa odcinki TLS** i mylenie ich jest
-najczestszym zrodlem klopotow:
+Za pomaranczowa chmurka istnieja **dwa odcinki polaczenia**:
 
 ```
-przegladarka  --(1)-->  Cloudflare  --(2)-->  Twoj serwer
+przegladarka  --(1) HTTPS-->  Cloudflare  --(2)-->  Twoj serwer
 ```
 
-Odcinek **(1)** zabezpiecza certyfikat Cloudflare - zaufany, nic nie robisz.
-Odcinek **(2)** zabezpiecza certyfikat **na Twoim serwerze**. To wlasnie jego
-widza narzedzia, ktore lacza sie z serwerem bezposrednio - i to on bywa
-raportowany jako self-signed.
+Wybierz **SSL/TLS -> Overview -> Flexible**. Wtedy odcinek (1) jest
+szyfrowany certyfikatem Cloudflare - powszechnie zaufanym, nic nie robisz.
+Odcinek (2) to zwykly HTTP, dokladnie taki, jaki mowi powyzszy server block.
+**Na serwerze nie ma zadnego certyfikatu** - ani do wygenerowania, ani do
+odnowienia, ani do pomylenia z czyms niezaufanym.
 
-#### Tryb szyfrowania (SSL/TLS -> Overview)
+To dziala poprawnie z ta aplikacja: backend decyduje, czy oznaczyc
+ciasteczko sesji jako `Secure`, wylacznie na podstawie `APP_ENV=production` -
+nie na podstawie tego, czy konkretne zadanie przyszlo po HTTP czy HTTPS.
+Przegladarka i tak zawsze widzi ta strone przez HTTPS (polaczenie do
+Cloudflare), wiec logowanie dziala i sesja sie utrzymuje. Cena trybu
+`Flexible` to brak szyfrowania na samym odcinku Cloudflare-serwer - w
+zamian caly temat certyfikatow znika.
 
-| Tryb | Skutek |
-| ---- | ------ |
-| `Flexible` | **Nigdy.** Cloudflare laczy sie z serwerem po zwyklym HTTP, backend widzi `X-Forwarded-Proto: http`, nie uzna polaczenia za bezpieczne i **logowanie nie bedzie sie utrzymywac**. |
-| `Full` | Szyfrowane, ale certyfikat serwera **nie jest sprawdzany** - certyfikat samopodpisany "dziala" i dokladnie stad biora sie zgloszenia o niezaufanym certyfikacie. |
-| `Full (strict)` | **Wlasciwy wybor.** Wymaga prawdziwego certyfikatu na serwerze. |
+> Tryby `Full` i `Full (strict)` wymagalyby certyfikatu z powrotem na
+> serwerze - to jest dokladnie to, czego ten wariant unika. Jesli kiedys
+> zechcesz podniesc poprzeczke, wroc do wariantu z wlasnym certyfikatem
+> (Let's Encrypt lub Cloudflare Origin CA) i 443 w server bloku.
 
-#### Certyfikat na serwerze - dwie opcje
-
-- **Cloudflare Origin CA** (SSL/TLS -> Origin Server -> Create Certificate):
-  darmowy, wazny 15 lat, bez odnawiania. Zaufany przez Cloudflare, ale **nie
-  przez przegladarki** - cokolwiek siega serwera z pominieciem Cloudflare
-  nadal zobaczy certyfikat niezaufany.
-- **Let's Encrypt**: zaufany przez wszystkich, wymaga odnawiania. Dziala za
-  pomaranczowa chmurka, bo Cloudflare przepuszcza wyzwanie HTTP-01.
-
-Jesli inne systemy odpytuja ten serwer bezposrednio, wybierz **Let's Encrypt** -
-Origin CA nie rozwiaze zgloszen o self-signed poza Cloudflare.
-
-Certyfikat samopodpisany ze `scripts/dev-certs.sh` jest wylacznie do pierwszego
-uruchomienia. Nie zostawiaj go na produkcji.
-
-#### Prawdziwy adres uzytkownika
+### 3. Prawdziwy adres uzytkownika
 
 Bez tego `$remote_addr` jest adresem Cloudflare przy **kazdym** zadaniu, wiec
 wszyscy uzytkownicy trafiaja do jednego wspolnego licznika limitu zapytan, a w
-logu widnieje proxy zamiast klienta. Gotowy plik jest w repozytorium:
+logu i w dzienniku zdarzen widnieje proxy zamiast klienta. Gotowy plik jest w
+repozytorium:
 
 ```bash
-sudo cp nginx/cloudflare-real-ip.conf /etc/nginx/conf.d/
+sudo cp docs/cloudflare-real-ip.conf /etc/nginx/conf.d/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -417,24 +371,49 @@ Cloudflare czasem dokłada nowe zakresy - odswiez je i przeladuj nginx:
 ./scripts/update-cloudflare-ips.sh
 ```
 
-#### Limit czasu
+### 4. Limit czasu
 
 Cloudflare przerywa zadanie po **100 sekundach** i pokazuje blad 524.
 Domyslny `SOLVER_TIME_LIMIT_SECONDS=60` miesci sie w limicie, ale podniesienie
 go powyzej okolo 90 s sprawi, ze generowanie grafiku bedzie sie wywalac w
 przegladarce, mimo ze solver dalej liczy na serwerze.
 
-#### IPv6
+### 5. IPv6
 
-Rekord AAAA wymaga `listen [::]:443 ssl;` w server bloku - blok tylko dla
+Rekord AAAA wymaga `listen [::]:80;` w server bloku - blok tylko dla
 IPv4 nigdy nie zostanie osiagniety.
 
-#### Opcjonalne domkniecie
+### Skad sie brala "connection is untrusted" i dlaczego ten wariant to usuwa
 
-Gdy wszystko dziala: **Authenticated Origin Pulls** (SSL/TLS -> Origin Server)
-plus firewall przyjmujacy port 443 tylko z zakresow Cloudflare. Wtedy nikt nie
-dosiegnie serwera inaczej niz przez Cloudflare i pytanie o certyfikat origin
-przestaje byc widoczne z zewnatrz.
+Certyfikat samopodpisany (ten generowany kiedys skryptem `dev-certs.sh`,
+ktorego juz nie ma w repozytorium) jest zaufany tylko przez przegladarke,
+ktora sama go wygenerowala. Kazde inne urzadzenie - inny komputer, telefon,
+a takze filtr tresci w rodzaju Fortinet WebFilter - zobaczy certyfikat
+wystawiony przez nieznanego wystawce i pokaze ostrzezenie.
+
+W tym wariancie serwer **nigdy nie prezentuje wlasnego certyfikatu** -
+jedynym certyfikatem, jaki widzi ktokolwiek na zewnatrz, jest certyfikat
+Cloudflare, powszechnie zaufany. To usuwa ta klase problemu calkowicie.
+
+Jest jeden wyjatek, ktorego zadna zmiana po stronie serwera nie naprawi:
+korporacyjna inspekcja SSL (Fortinet w trybie *deep inspection*, Zscaler
+i podobne) podmienia certyfikat kazdej odwiedzanej strony - wlacznie z
+Google czy bankami - na certyfikat wlasnego CA firmy. Jesli to CA nie jest
+zainstalowane jako zaufane na danym urzadzeniu, przegladarka pokaze
+dokladnie ten sam komunikat *"connection is untrusted"*, niezaleznie od
+tego, jak poprawny jest certyfikat Cloudflare. To rozroznia sie po
+wystawcy certyfikatu (przegladarka -> ikona klodki -> szczegoly certyfikatu):
+jesli jako *Issued by* widnieje Cloudflare/Google Trust Services - problem
+jest po stronie tej konkretnej sieci firmowej i naprawia go tamtejszy dzial
+IT (instalacja CA firmy albo wyjatek dla tej domeny), nie ten projekt.
+
+### Opcjonalne domkniecie
+
+Gdy wszystko dziala: firewall przyjmujacy port 80 na tym hoscie tylko z
+zakresow Cloudflare (`docs/cloudflare-real-ip.conf` ma pelna liste). Bez
+tego kazdy, kto pozna surowy adres IP VPS, moze ominac Cloudflare i
+polaczyc sie z serwerem bezposrednio - w tym sfalszowac `X-Forwarded-For`,
+bo nic wyzej juz by go nie odtwarzalo z zaufanego zrodla.
 
 ---
 
@@ -572,7 +551,7 @@ npm run dev                          # http://localhost:5173
 ```
 
 Vite proxuje `/api` na `http://127.0.0.1:8000`, dzieki czemu ciasteczko sesji
-jest same-origin - dokladnie jak za nginx w produkcji.
+jest same-origin - dokladnie jak za reverse proxy w produkcji.
 
 > Oba pliki Compose maja wlasne nazwy projektow (`nurse` i `nurse-dev`),
 > wiec stack produkcyjny i deweloperska baza moga dzialac obok siebie na
@@ -696,9 +675,11 @@ nurse-scheduler/
 │   └── tests/
 ├── frontend/
 │   └── src/{api,components,pages,types,styles}
-├── nginx/                          # konfiguracja produkcyjna + certyfikaty
-├── scripts/                        # backup.sh, restore.sh, dev-certs.sh
-├── docs/SPEC.md                    # oryginalne wymagania
+├── scripts/                        # backup.sh, restore.sh, update-cloudflare-ips.sh
+├── docs/
+│   ├── SPEC.md                     # oryginalne wymagania
+│   ├── nginx-host-example.conf     # server block dla reverse proxy na VPS
+│   └── cloudflare-real-ip.conf     # przywraca prawdziwy adres klienta
 ├── docker-compose.yml              # produkcja
 ├── docker-compose.dev.yml          # sam PostgreSQL do pracy lokalnej
 └── .env.example
@@ -742,8 +723,9 @@ Operacje modyfikujace wymagaja naglowka `X-CSRF-Token` zgodnego z ciasteczkiem
 | GET | `/api/dashboard` | MANAGER |
 | GET | `/api/health` | - |
 
-Dokumentacja interaktywna (`/api/docs`) jest dostepna **tylko** poza produkcja;
-w produkcji nginx dodatkowo zwraca dla niej 404.
+Dokumentacja interaktywna (`/api/docs`) jest dostepna **tylko** poza produkcja -
+FastAPI sam wylacza ten routing, gdy `APP_ENV=production` (`docs_url=None`),
+niezaleznie od tego, co stoi przed nim.
 
 Kody bledow: `401` brak sesji, `403` brak uprawnien lub zly token CSRF,
 `404` brak zasobu, `409` konflikt z regula grafiku (z lista naruszen),
@@ -790,6 +772,16 @@ jest wazniejsza niz czas.
 godzin, wiec faktyczna dlugosc nocnej zmiany w te jedna noc rozni sie o godzine
 od `duration_minutes`. Rozliczenie czasu pracy opiera sie na `duration_minutes`
 z definicji zmiany - tak jak w grafikach papierowych.
+
+**Brak TLS w samej aplikacji jest zamierzony.** Wczesniejsza wersja tego
+projektu miala wlasny kontener nginx z certyfikatem (Let's Encrypt albo
+samopodpisany do testow). Certyfikat samopodpisany byl zrodlem realnego
+problemu - dowolne urzadzenie laczace sie z serwerem bezposrednio zglaszalo
+go jako niezaufany. Zamiast utrzymywac certyfikat w dwoch miejscach (Cloudflare
+dla przegladarki i cos innego dla origin), stack przestal w ogole terminowac
+TLS: caly ruch publiczny idzie przez reverse proxy, ktory juz dziala na VPS,
+a jedynym certyfikatem widocznym z zewnatrz jest certyfikat Cloudflare. Patrz
+[Reverse proxy i TLS](#reverse-proxy-i-tls-vps).
 
 **Historia.** Kazda generacja i kazda reczna korekta zapisuje pelny zrzut
 grafiku w `schedule_versions`. Nic nie jest kasowane bezpowrotnie.

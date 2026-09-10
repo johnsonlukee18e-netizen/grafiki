@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Refresh nginx/cloudflare-real-ip.conf from Cloudflare's published ranges.
+# Refresh docs/cloudflare-real-ip.conf from Cloudflare's published ranges.
 #
 #   ./scripts/update-cloudflare-ips.sh
-#   sudo cp nginx/cloudflare-real-ip.conf /etc/nginx/conf.d/
+#   sudo cp docs/cloudflare-real-ip.conf /etc/nginx/conf.d/
 #   sudo nginx -t && sudo systemctl reload nginx
 #
 # Cloudflare adds ranges from time to time. A stale list is not a cosmetic
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET="${1:-$(dirname "$SCRIPT_DIR")/nginx/cloudflare-real-ip.conf}"
+TARGET="${1:-$(dirname "$SCRIPT_DIR")/docs/cloudflare-real-ip.conf}"
 
 fetch() {
   curl -fsS --max-time 20 "$1"
