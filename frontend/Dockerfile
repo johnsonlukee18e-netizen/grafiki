@@ -11,8 +11,10 @@ COPY tsconfig.json vite.config.ts index.html ./
 COPY src ./src
 RUN npm run build
 
-# Stage 2 - serve the static bundle. Nginx (the edge container) proxies /api
-# to the backend, so this image only ships files.
+# Stage 2 - serve the static bundle. This nginx only serves files; it does
+# not proxy /api, terminate TLS or add security headers - that is the job of
+# the reverse proxy already running on the VPS host (see README, section
+# "Reverse proxy i TLS").
 FROM nginx:1.27-alpine AS runtime
 
 COPY --from=build /app/dist /usr/share/nginx/html

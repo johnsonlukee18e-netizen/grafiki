@@ -53,24 +53,6 @@ if ! git fetch --all --prune 2>/tmp/nurse-fetch.err; then
 fi
 git checkout --detach "$GIT_REF"
 
-# --- TLS ------------------------------------------------------------------
-# Read one setting without sourcing .env (which would execute it).
-TLS_TERMINATION="$(sed -n 's/^[[:space:]]*TLS_TERMINATION[[:space:]]*=[[:space:]]*//p' .env \
-                   | tail -1 | tr -d '"'"'"'[:space:]')"
-TLS_TERMINATION="${TLS_TERMINATION:-container}"
-
-if [ "$TLS_TERMINATION" = "host" ]; then
-  echo "== TLS is terminated by the host proxy - skipping the certificate check =="
-# nginx refuses to start without them, and it would fail long after the
-# backend looked fine - say so up front instead.
-elif [ ! -s nginx/certs/fullchain.pem ] || [ ! -s nginx/certs/privkey.pem ]; then
-  echo "ERROR: TLS certificate missing in $APP_DIR/nginx/certs/." >&2
-  echo "  Expected fullchain.pem and privkey.pem (see README -> HTTPS i domena)." >&2
-  echo "  For a first smoke test a self-signed pair is enough:" >&2
-  echo "    ./scripts/dev-certs.sh your-domain.example" >&2
-  exit 1
-fi
-
 # --- build and start ------------------------------------------------------
 echo "== building images =="
 docker compose build
@@ -84,13 +66,12 @@ up_code=${PIPESTATUS[0]}
 set -e
 if [ "$up_code" -ne 0 ]; then
   if grep -q 'address already in use' /tmp/nurse-up.log; then
-    echo "ERROR: another service on this host already owns port 80 or 443." >&2
-    echo "  This stack ships its own nginx container, so a distribution web" >&2
-    echo "  server has to give the port back. Find the owner with:" >&2
-    echo "    ss -tlnp '( sport = :80 or sport = :443 )'" >&2
-    echo "  and disable it (disable, not just stop - it would return on reboot):" >&2
-    echo "    systemctl disable --now nginx" >&2
-    echo "    systemctl disable --now apache2" >&2
+    echo "ERROR: BACKEND_PORT or FRONTEND_PORT is already taken on this host." >&2
+    echo "  This stack only binds to 127.0.0.1, never to 80/443, so it should" >&2
+    echo "  never collide with an existing web server - but another instance of" >&2
+    echo "  this same stack, or something else on the same port, still can:" >&2
+    echo "    ss -tlnp '( sport = :8000 or sport = :8080 )'" >&2
+    echo "  set BACKEND_PORT / FRONTEND_PORT in .env to free ones and retry." >&2
   fi
   exit "$up_code"
 fi
@@ -119,7 +100,6 @@ echo "== waiting for the containers =="
 wait_for nurse_postgres 24
 wait_for nurse_backend "$HEALTH_RETRIES"
 wait_for nurse_frontend 12
-wait_for nurse_nginx 12
 
 echo "== smoke test =="
 docker compose exec -T backend curl -fsS http://127.0.0.1:8000/api/health
