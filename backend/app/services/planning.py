@@ -8,7 +8,7 @@ that weeks, rest periods and the Sunday cycle never restart at a month border.
 from __future__ import annotations
 
 import calendar
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -54,6 +54,7 @@ def to_shift_def(shift: Shift) -> ShiftDef:
         duration_minutes=shift.duration_minutes,
         crosses_midnight=shift.crosses_midnight,
         minimum_staff=shift.minimum_staff,
+        minimum_nurses=shift.minimum_nurses,
     )
 
 
@@ -150,6 +151,7 @@ def build_context(
         availability=availability,
         holidays=holidays,
         boundary=boundary,
+        today=datetime.now().date(),
     )
 
 

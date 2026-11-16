@@ -34,7 +34,9 @@ def to_rule_config(config: DepartmentConfig) -> RuleConfig:
         sunday_rule_mode=config.sunday_rule_mode,
         sunday_cycle_anchor=config.sunday_cycle_anchor,
         sunday_includes_saturday_night=config.sunday_includes_saturday_night,
-        solver_time_limit_seconds=config.solver_time_limit_seconds,
+        solver_time_limit_seconds=min(
+            config.solver_time_limit_seconds, settings.solver_max_seconds
+        ),
         solver_seed=config.solver_seed,
         solver_workers=config.solver_workers,
         allow_overstaffing=config.allow_overstaffing,

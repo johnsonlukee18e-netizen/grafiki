@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -76,6 +76,42 @@ def require_schedule(db: Session, schedule_id: int) -> Schedule:
     schedule = db.get(Schedule, schedule_id)
     if schedule is None:
         raise ScheduleError("Nie znaleziono grafiku.", status=404)
+    return schedule
+
+
+# --- concurrency ----------------------------------------------------------
+#: Namespace for the per-month advisory lock (arbitrary, just unique to us).
+_GENERATION_LOCK_NAMESPACE = 734_100_000
+
+
+def _generation_lock_key(year: int, month: int) -> int:
+    return _GENERATION_LOCK_NAMESPACE + year * 100 + month
+
+
+def try_lock_month_generation(db: Session, year: int, month: int) -> bool:
+    """Transaction-scoped advisory lock: one generation per month at a time.
+
+    Two managers clicking "Generuj" together would otherwise both run the
+    solver for a minute and then race on the same rows (unique violations,
+    lost versions). The lock is released automatically at commit/rollback.
+    """
+    return bool(
+        db.scalar(
+            text("SELECT pg_try_advisory_xact_lock(:key)"),
+            {"key": _generation_lock_key(year, month)},
+        )
+    )
+
+
+def lock_schedule(db: Session, schedule: Schedule) -> Schedule:
+    """Row lock so concurrent edits of one schedule are applied one by one.
+
+    Every mutation validates "before" and "after" and bumps the version
+    number; without serialisation two parallel edits could each pass the
+    hard-constraint gate on their own and break it together, or collide on
+    the (schedule_id, version) unique key.
+    """
+    db.refresh(schedule, with_for_update=True)
     return schedule
 
 
@@ -152,6 +188,23 @@ def run_validation(
     return result
 
 
+def current_validation(
+    db: Session, schedule: Schedule, ctx: PlanningContext | None = None
+) -> ValidationResult:
+    """Fresh validation for display.
+
+    Availability, employees, settings and the neighbouring months all change
+    after a schedule was last validated, so the cached report goes stale.
+    Editable schedules get the fresh result persisted (status included);
+    approved / archived ones are only re-checked, never silently re-labelled
+    by somebody merely opening the page.
+    """
+    if schedule.is_editable:
+        return run_validation(db, schedule, ctx)
+    context = ctx or build_context_for(db, schedule)
+    return validate(context, planning.load_assignments(db, schedule.id))
+
+
 # --- generation -----------------------------------------------------------
 def generate_schedule(
     db: Session,
@@ -160,7 +213,11 @@ def generate_schedule(
     user: User | None = None,
 ) -> tuple[Schedule, GenerationResult, ValidationResult | None]:
     """Run OR-Tools, store the roster and validate it independently."""
-    schedule = get_or_create(db, year, month, user)
+    if not try_lock_month_generation(db, year, month):
+        raise ScheduleError(
+            "Grafik na ten miesiac jest wlasnie generowany. Poczekaj na wynik i odswiez strone."
+        )
+    schedule = lock_schedule(db, get_or_create(db, year, month, user))
     if schedule.status is ScheduleStatus.APPROVED:
         raise ScheduleError(
             "Grafik jest juz zatwierdzony. Cofnij zatwierdzenie, aby wygenerowac go ponownie."
@@ -175,10 +232,19 @@ def generate_schedule(
     schedule.status = ScheduleStatus.GENERATING
     db.flush()
 
+    has_roster = (
+        db.scalar(select(Assignment.id).where(Assignment.schedule_id == schedule.id).limit(1))
+        is not None
+    )
     result = generate(ctx)
     if not result.success:
-        schedule.status = ScheduleStatus.INVALID
         schedule.solver_status = result.status
+        if has_roster:
+            # The previous roster is untouched - report its real state instead
+            # of branding a perfectly valid schedule INVALID.
+            run_validation(db, schedule, ctx)
+        else:
+            schedule.status = ScheduleStatus.INVALID
         db.flush()
         audit_service.record(
             db,
@@ -190,7 +256,7 @@ def generate_schedule(
         )
         return schedule, result, None
 
-    if db.scalar(select(Assignment.id).where(Assignment.schedule_id == schedule.id).limit(1)):
+    if has_roster:
         _bump_version(db, schedule, "Ponowne wygenerowanie grafiku", user)
 
     replace_assignments(db, schedule, result.assignments)
@@ -256,6 +322,33 @@ def _violation_key(item: dict[str, Any]) -> tuple:
     return (item["code"], item.get("employee_id"), item.get("date"), item.get("shift_code"))
 
 
+def _violation_severity(item: dict[str, Any]) -> int:
+    """How bad a violation is, so "the same breach, only worse" counts as new.
+
+    An already over-limit week must not absorb yet another shift, and an
+    already understaffed shift must not lose one more person, just because
+    the violation's key existed before the edit.
+    """
+    details = item.get("details") or {}
+    if "over_by" in details:
+        return int(details["over_by"])
+    if "required" in details and "actual" in details:
+        return int(details["required"]) - int(details["actual"])
+    if "rest_minutes" in details and "required_minutes" in details:
+        return int(details["required_minutes"]) - int(details["rest_minutes"])
+    return 0
+
+
+def _new_or_worse(after: list[dict[str, Any]], before: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    previous = {_violation_key(item): _violation_severity(item) for item in before}
+    return [
+        item
+        for item in after
+        if _violation_key(item) not in previous
+        or _violation_severity(item) > previous[_violation_key(item)]
+    ]
+
+
 def apply_manual_change(
     db: Session,
     schedule: Schedule,
@@ -271,6 +364,8 @@ def apply_manual_change(
     ``mutate(db, schedule, shifts) -> int | None`` performs the change and may
     return the id of the affected assignment.
     """
+    lock_schedule(db, schedule)
+    db.expire_all()  # read the roster as it is now, after any edit we waited for
     if schedule.status is ScheduleStatus.APPROVED:
         raise ScheduleError(
             "Grafik jest zatwierdzony i nie mozna go edytowac. Cofnij zatwierdzenie."
@@ -279,9 +374,7 @@ def apply_manual_change(
         raise ScheduleError("Grafik jest zarchiwizowany i tylko do odczytu.")
 
     ctx = build_context_for(db, schedule)
-    before = validate(ctx, planning.load_assignments(db, schedule.id))
-    before_errors = {_violation_key(e) for e in before.as_dict()["errors"]}
-    before_warnings = {_violation_key(w) for w in before.as_dict()["warnings"]}
+    before = validate(ctx, planning.load_assignments(db, schedule.id)).as_dict()
 
     savepoint = db.begin_nested()
     try:
@@ -296,7 +389,7 @@ def apply_manual_change(
 
     after = validate(ctx, planning.load_assignments(db, schedule.id))
     after_dict = after.as_dict()
-    new_errors = [e for e in after_dict["errors"] if _violation_key(e) not in before_errors]
+    new_errors = _new_or_worse(after_dict["errors"], before["errors"])
     if new_errors:
         savepoint.rollback()
         raise ScheduleError(
@@ -305,7 +398,7 @@ def apply_manual_change(
         )
     savepoint.commit()
 
-    new_warnings = [w for w in after_dict["warnings"] if _violation_key(w) not in before_warnings]
+    new_warnings = _new_or_worse(after_dict["warnings"], before["warnings"])
     _bump_version(db, schedule, reason, user)
     schedule.validation = after_dict
     if schedule.status not in (ScheduleStatus.APPROVED, ScheduleStatus.ARCHIVED):
@@ -493,6 +586,7 @@ def _require_in_month(schedule: Schedule, work_date: date) -> None:
 # --- approval -------------------------------------------------------------
 def approve(db: Session, schedule: Schedule, user: User | None) -> ValidationResult:
     """Approve, but never an invalid schedule."""
+    lock_schedule(db, schedule)
     if schedule.status is ScheduleStatus.APPROVED:
         raise ScheduleError("Grafik jest juz zatwierdzony.")
     if schedule.status is ScheduleStatus.ARCHIVED:
@@ -524,6 +618,7 @@ def approve(db: Session, schedule: Schedule, user: User | None) -> ValidationRes
 
 
 def unapprove(db: Session, schedule: Schedule, user: User | None) -> Schedule:
+    lock_schedule(db, schedule)
     if schedule.status is not ScheduleStatus.APPROVED:
         raise ScheduleError("Grafik nie jest zatwierdzony.")
     _bump_version(db, schedule, "Cofniecie zatwierdzenia", user)
@@ -540,3 +635,80 @@ def unapprove(db: Session, schedule: Schedule, user: User | None) -> Schedule:
         metadata={"unapproved": True, "version": schedule.version},
     )
     return schedule
+
+
+# --- history --------------------------------------------------------------
+def restore_version(
+    db: Session, schedule: Schedule, version: int, user: User | None
+) -> tuple[ValidationResult, list[str]]:
+    """Bring back the roster of an older version as a new version.
+
+    Nothing is overwritten: the current state is snapshotted first, exactly
+    like before a regeneration. The restored roster is then validated against
+    today's rules and data - if availability or settings changed since, the
+    errors show up in the validation panel just as after a generation.
+
+    Returns the validation and human-readable notes about entries that could
+    not be restored (e.g. a shift type that no longer exists).
+    """
+    lock_schedule(db, schedule)
+    if schedule.status is ScheduleStatus.APPROVED:
+        raise ScheduleError(
+            "Grafik jest zatwierdzony. Cofnij zatwierdzenie, aby przywrocic starsza wersje."
+        )
+    if schedule.status is ScheduleStatus.ARCHIVED:
+        raise ScheduleError("Grafik jest zarchiwizowany i tylko do odczytu.")
+    if version == schedule.version:
+        raise ScheduleError("To jest biezaca wersja grafiku.", status=400)
+
+    stored = db.scalar(
+        select(ScheduleVersion).where(
+            ScheduleVersion.schedule_id == schedule.id, ScheduleVersion.version == version
+        )
+    )
+    if stored is None:
+        raise ScheduleError("Nie znaleziono tej wersji grafiku.", status=404)
+
+    shifts = shift_by_code(db)
+    known_employees = set(db.scalars(select(Employee.id)))
+    skipped: list[str] = []
+    restored: list[tuple[int, Shift, date, bool]] = []
+    seen: set[tuple[int, date]] = set()
+    for item in (stored.snapshot or {}).get("assignments", []):
+        day = date.fromisoformat(item["date"])
+        employee_id = int(item["employee_id"])
+        shift = shifts.get(item["shift_code"])
+        if shift is None:
+            skipped.append(
+                f"{day.isoformat()}: zmiana '{item['shift_code']}' nie jest juz aktywna."
+            )
+            continue
+        if employee_id not in known_employees or (employee_id, day) in seen:
+            skipped.append(f"{day.isoformat()}: pominieto wpis pracownika #{employee_id}.")
+            continue
+        seen.add((employee_id, day))
+        restored.append((employee_id, shift, day, bool(item.get("manually_modified"))))
+
+    _bump_version(db, schedule, f"Przywrocenie wersji v{version}", user)
+    db.execute(delete(Assignment).where(Assignment.schedule_id == schedule.id))
+    db.flush()
+    for employee_id, shift, day, manual in restored:
+        db.add(_build_assignment(schedule, employee_id, shift, day, manual=manual))
+    db.flush()
+
+    validation = run_validation(db, schedule)
+    audit_service.record(
+        db,
+        AuditAction.SCHEDULE_RESTORED,
+        user=user,
+        entity_type="schedule",
+        entity_id=schedule.id,
+        metadata={
+            "restored_version": version,
+            "version": schedule.version,
+            "assignments": len(restored),
+            "skipped": len(skipped),
+            "valid": validation.valid,
+        },
+    )
+    return validation, skipped

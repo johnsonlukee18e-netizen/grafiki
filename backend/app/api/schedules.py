@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import logging
+import re
+import unicodedata
 from datetime import date
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from sqlalchemy import select
@@ -24,6 +27,7 @@ from app.schemas import (
     DayInfo,
     GenerateRequest,
     GenerateResponse,
+    RestoreResponse,
     ScheduleDetail,
     ScheduleOut,
     ScheduleVersionDetail,
@@ -44,6 +48,19 @@ def _handle(error: ScheduleError) -> HTTPException:
         status_code=error.status,
         detail={"message": error.message, **error.details},
     )
+
+
+def attachment_header(filename: str) -> str:
+    """``Content-Disposition`` that survives non-ASCII names.
+
+    HTTP headers are Latin-1, so ``kowalczyk_michał.pdf`` used to crash the
+    response with a UnicodeEncodeError (500). Send an ASCII fallback plus the
+    RFC 5987 UTF-8 form that every current browser prefers.
+    """
+    folded = unicodedata.normalize("NFKD", filename.replace("ł", "l").replace("Ł", "L"))
+    ascii_name = folded.encode("ascii", "ignore").decode("ascii")
+    ascii_name = re.sub(r"[^A-Za-z0-9._-]+", "_", ascii_name).strip("_") or "grafik.pdf"
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
 
 
 def assignment_out(assignment: Assignment, code: str) -> AssignmentOut:
@@ -207,6 +224,29 @@ def schedule_version(
     return row
 
 
+@router.post("/{schedule_id}/history/{version}/restore", response_model=RestoreResponse)
+def restore_schedule_version(
+    schedule_id: int,
+    version: int,
+    db: Session = Depends(get_db_session),
+    user: User = Depends(require_manager),
+) -> RestoreResponse:
+    """Make an older version the current roster again (as a new version)."""
+    schedule = _require_schedule(db, schedule_id)
+    try:
+        result, skipped = schedule_service.restore_version(db, schedule, version, user)
+    except ScheduleError as exc:
+        db.rollback()
+        raise _handle(exc) from exc
+    db.commit()
+    db.refresh(schedule)
+    return RestoreResponse(
+        schedule=ScheduleOut.model_validate(schedule),
+        validation=result.as_dict(),
+        skipped=skipped,
+    )
+
+
 @router.get("/{schedule_id}/statistics")
 def schedule_statistics(
     schedule_id: int,
@@ -214,7 +254,7 @@ def schedule_statistics(
     _: User = Depends(require_manager),
 ) -> dict:
     schedule = _require_schedule(db, schedule_id)
-    result = schedule_service.run_validation(db, schedule)
+    result = schedule_service.current_validation(db, schedule)
     db.commit()
     return result.statistics
 
@@ -242,7 +282,7 @@ def schedule_pdf(
     return Response(
         content=pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": attachment_header(filename)},
     )
 
 
@@ -276,7 +316,7 @@ def employee_pdf(
     return Response(
         content=pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": attachment_header(filename)},
     )
 
 
@@ -300,6 +340,11 @@ def get_month(
         ),
         exclude_schedule_id=schedule.id if schedule else None,
     )
+    validation = schedule.validation if schedule else None
+    if schedule is not None and schedule.validation is not None:
+        # The cached report goes stale when availability, employees, settings
+        # or the neighbouring months change - always show the current truth.
+        validation = schedule_service.current_validation(db, schedule, ctx).as_dict()
     db.commit()
 
     employees = (
@@ -325,5 +370,5 @@ def get_month(
         employees=[employee_out(e, date(year, month, 1)) for e in employees],
         shifts=[ShiftOut.model_validate(s) for s in planning.active_shifts(db)],
         assignments=load_assignment_rows(db, schedule.id) if schedule else [],
-        validation=schedule.validation if schedule else None,
+        validation=validation,
     )

@@ -227,6 +227,13 @@ body {
   font-weight: 700;
 }
 
+/* nurses among the crew, under the head count */
+.coverage-row .coverage-nurses {
+  font-size: 0.6rem;
+  line-height: 1;
+  opacity: 0.8;
+}
+
 /* --- misc ---------------------------------------------------------------- */
 .check-row {
   display: flex;

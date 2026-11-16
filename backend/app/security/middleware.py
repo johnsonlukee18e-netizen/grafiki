@@ -69,9 +69,26 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     limit_req zone in front of it.
     """
 
+    #: How often idle counters are dropped (seconds).
+    PRUNE_EVERY = 60.0
+
     def __init__(self, app) -> None:
         super().__init__(app)
         self._hits: dict[tuple[str, str], deque[float]] = defaultdict(deque)
+        self._last_prune = time.monotonic()
+
+    def _prune(self, now: float, window: float) -> None:
+        """Forget clients that have been quiet for a whole window.
+
+        Without this every IP that ever called the API keeps a counter for the
+        lifetime of the process - a slow memory leak on a public site.
+        """
+        if now - self._last_prune < self.PRUNE_EVERY:
+            return
+        self._last_prune = now
+        stale = [key for key, hits in self._hits.items() if not hits or now - hits[-1] > window]
+        for key in stale:
+            del self._hits[key]
 
     def _bucket(self, path: str) -> tuple[str, int]:
         if path.startswith("/api/auth"):
@@ -89,6 +106,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         now = time.monotonic()
         window = settings.rate_limit_window_seconds
+        self._prune(now, window)
         hits = self._hits[(client, bucket)]
         while hits and now - hits[0] > window:
             hits.popleft()

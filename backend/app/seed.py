@@ -29,10 +29,11 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
 logger = logging.getLogger("seed")
 
 SHIFTS = (
-    # code, name, start, end, minutes, crosses midnight, minimum staff, order
-    ("D", "Dzien", time(7, 0), time(19, 0), 720, False, 2, 1),
-    ("R", "Ranek", time(7, 0), time(14, 35), 455, False, 2, 2),
-    ("N", "Noc", time(19, 0), time(7, 0), 720, True, 2, 3),
+    # code, name, start, end, minutes, crosses midnight, minimum staff,
+    # minimum nurses among them, order
+    ("D", "Dzien", time(7, 0), time(19, 0), 720, False, 2, 1, 1),
+    ("R", "Ranek", time(7, 0), time(14, 35), 455, False, 2, 1, 2),
+    ("N", "Noc", time(19, 0), time(7, 0), 720, True, 2, 1, 3),
 )
 
 #: The first ten match the brief (7 nurses + 3 care workers); the rest make the
@@ -73,7 +74,7 @@ DEMO_AVAILABILITY = (
 
 def seed_shifts(db: Session) -> int:
     created = 0
-    for code, name, start, end, minutes, crosses, minimum, order in SHIFTS:
+    for code, name, start, end, minutes, crosses, minimum, nurses, order in SHIFTS:
         if db.scalar(select(Shift).where(Shift.code == code)):
             continue
         db.add(
@@ -85,6 +86,7 @@ def seed_shifts(db: Session) -> int:
                 duration_minutes=minutes,
                 crosses_midnight=crosses,
                 minimum_staff=minimum,
+                minimum_nurses=nurses,
                 active=True,
                 sort_order=order,
             )

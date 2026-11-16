@@ -62,7 +62,7 @@ def _configure(solver: cp_model.CpSolver, ctx: PlanningContext, time_limit: floa
 def generate(ctx: PlanningContext) -> GenerationResult:
     """Produce the best roster the solver can find within its time budget."""
     pre = diag.pre_solve_checks(ctx)
-    blocking = [d for d in pre if d.code in {"NO_EMPLOYEES", "WEEK_CAPACITY", "DAY_UNDERSTAFFED"}]
+    blocking = [d for d in pre if d.code in diag.BLOCKING_CODES]
     if blocking:
         return GenerationResult(
             success=False,
@@ -158,7 +158,7 @@ def _infeasibility_core(ctx: PlanningContext) -> list[diag.Diagnostic]:
     hard.add_rest_and_night_rules(model, variables, ctx)
     hard.add_sunday_rule(model, variables, ctx)
 
-    literals: dict[cp_model.IntVar, tuple[date, str, int]] = {}
+    literals: dict[cp_model.IntVar, tuple[date, str, int, bool]] = {}
     for day in ctx.days:
         for shift in ctx.shifts:
             if shift.minimum_staff <= 0:
@@ -170,7 +170,13 @@ def _infeasibility_core(ctx: PlanningContext) -> list[diag.Diagnostic]:
             ]
             literal = model.NewBoolVar(f"need_{day.isoformat()}_{shift.code}")
             model.Add(sum(candidates) >= shift.minimum_staff).OnlyEnforceIf(literal)
-            literals[literal] = (day, shift.code, shift.minimum_staff)
+            literals[literal] = (day, shift.code, shift.minimum_staff, False)
+            if shift.minimum_nurses > 0:
+                nurses = model.NewBoolVar(f"nurses_{day.isoformat()}_{shift.code}")
+                model.Add(
+                    sum(hard.nurse_candidates(variables, ctx, day, shift)) >= shift.minimum_nurses
+                ).OnlyEnforceIf(nurses)
+                literals[nurses] = (day, shift.code, shift.minimum_nurses, True)
 
     model.AddAssumptions(list(literals.keys()))
     solver = cp_model.CpSolver()
@@ -186,10 +192,11 @@ def _infeasibility_core(ctx: PlanningContext) -> list[diag.Diagnostic]:
         literal = index_to_literal.get(index)
         if literal is None:
             continue
-        day, code, required = literals[literal]
+        day, code, required, nurses_only = literals[literal]
         unavailable = diag.unavailable_summary(ctx, day)
+        who = "pielegniarek" if nurses_only else "osob"
         message = (
-            f"{day.isoformat()}: zmiana {code} wymaga {required} osob, ale nie da sie ich "
+            f"{day.isoformat()}: zmiana {code} wymaga {required} {who}, ale nie da sie ich "
             "obsadzic bez zlamania innych regul (odpoczynek, regula po nocce, limit godzin, "
             "wolne niedziele)."
         )
@@ -197,11 +204,15 @@ def _infeasibility_core(ctx: PlanningContext) -> list[diag.Diagnostic]:
             message += " Niedostepni tego dnia: " + ", ".join(unavailable) + "."
         out.append(
             diag.Diagnostic(
-                code="CORE_MIN_STAFF",
+                code="CORE_MIN_NURSES" if nurses_only else "CORE_MIN_STAFF",
                 message=message,
                 day=day,
                 shift_code=code,
-                details={"required": required, "unavailable_employees": unavailable},
+                details={
+                    "required": required,
+                    "nurses_only": nurses_only,
+                    "unavailable_employees": unavailable,
+                },
             )
         )
     return out[:20]

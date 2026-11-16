@@ -33,6 +33,8 @@ class ShiftDef:
     duration_minutes: int
     crosses_midnight: bool
     minimum_staff: int
+    #: Part of ``minimum_staff`` that has to be covered by nurses.
+    minimum_nurses: int = 0
 
     def start_on(self, day: date) -> datetime:
         return datetime.combine(day, self.start_time)
@@ -61,6 +63,10 @@ class EmployeeCtx:
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def is_nurse(self) -> bool:
+        return self.role is EmployeeRole.NURSE
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +128,9 @@ class PlanningContext:
     #: Assignments outside the planned month (previous / next month) that are
     #: fixed facts and must be honoured for rest, weekly hours and Sundays.
     boundary: list[PlannedAssignment] = field(default_factory=list)
+    #: "Today" for rules that depend on it (an inactive employee may appear in
+    #: past months - they worked then). ``None`` treats every day as future.
+    today: date | None = None
 
     # -- lookups ---------------------------------------------------------
     @property

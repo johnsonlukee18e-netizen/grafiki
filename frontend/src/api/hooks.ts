@@ -13,9 +13,11 @@ import type {
   Employee,
   GenerateResponse,
   Holiday,
+  RestoreResponse,
   Schedule,
   ScheduleDetail,
   ScheduleVersion,
+  ScheduleVersionDetail,
   Shift,
   Statistics,
   User,
@@ -33,6 +35,7 @@ export const keys = {
   schedules: ['schedules'] as const,
   schedule: (year: number, month: number) => ['schedule', year, month] as const,
   history: (id: number) => ['history', id] as const,
+  historyVersion: (id: number, version: number) => ['history', id, version] as const,
   statistics: (id: number) => ['statistics', id] as const,
   holidays: (year: number) => ['holidays', year] as const,
   availability: (employeeId: number | null, year: number, month: number) =>
@@ -164,6 +167,25 @@ export function useHistory(id: number | undefined) {
     queryKey: keys.history(id ?? 0),
     queryFn: () => api.get<ScheduleVersion[]>(`/api/schedules/${id}/history`),
     enabled: Boolean(id),
+  })
+}
+
+export function useHistoryVersion(id: number | undefined, version: number | undefined) {
+  return useQuery({
+    queryKey: keys.historyVersion(id ?? 0, version ?? 0),
+    queryFn: () =>
+      api.get<ScheduleVersionDetail>(`/api/schedules/${id}/history/${version}`),
+    enabled: Boolean(id && version),
+    staleTime: Infinity, // a stored version never changes
+  })
+}
+
+export function useRestoreVersion() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, version }: { id: number; version: number }) =>
+      api.post<RestoreResponse>(`/api/schedules/${id}/history/${version}/restore`),
+    onSuccess: () => client.invalidateQueries(),
   })
 }
 

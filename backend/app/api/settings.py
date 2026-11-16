@@ -72,6 +72,16 @@ def update_shift(
     if shift is None:
         raise HTTPException(status_code=404, detail="Nie znaleziono zmiany.")
     changes = payload.model_dump(exclude_unset=True)
+    staff = changes.get("minimum_staff", shift.minimum_staff)
+    nurses = changes.get("minimum_nurses", shift.minimum_nurses)
+    if nurses > staff:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Minimalna liczba pielegniarek nie moze byc wieksza niz minimalna obsada "
+                f"zmiany ({staff})."
+            ),
+        )
     for field, value in changes.items():
         setattr(shift, field, value)
     if "start_time" in changes or "end_time" in changes or "duration_minutes" in changes:

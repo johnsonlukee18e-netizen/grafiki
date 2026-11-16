@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     session_cookie_name: str = "nurse_session"
     session_max_age_seconds: int = 60 * 60 * 8  # 8h
     session_idle_timeout_seconds: int = 60 * 60 * 2  # rolling refresh window
+    # The cookie slides while the user is active, but never beyond this many
+    # seconds after the Google login - a stolen cookie cannot live forever.
+    session_absolute_max_seconds: int = 60 * 60 * 24
     csrf_cookie_name: str = "nurse_csrf"
 
     # --- Google OAuth ----------------------------------------------------
@@ -60,6 +63,11 @@ class Settings(BaseSettings):
     solver_time_limit_seconds: int = 60
     solver_seed: int = 42
     solver_workers: int = 8
+    # Hard ceiling for the per-department time limit. Generation runs inside
+    # the HTTP request, and Cloudflare drops a request after 100 s (error 524)
+    # while the solver would keep running. 75 s leaves room for the
+    # infeasibility diagnosis and the database work around the solve.
+    solver_max_seconds: int = 75
 
     # --- rate limiting ---------------------------------------------------
     rate_limit_enabled: bool = True

@@ -60,6 +60,8 @@ export interface Shift {
   duration_minutes: number
   crosses_midnight: boolean
   minimum_staff: number
+  /** How many of minimum_staff must be nurses (0 = rule off). */
+  minimum_nurses: number
   active: boolean
   sort_order: number
 }
@@ -228,6 +230,24 @@ export interface EditResponse {
   schedule: Schedule
   validation: ValidationResult
   new_warnings: Violation[]
+}
+
+export interface RestoreResponse {
+  schedule: Schedule
+  validation: ValidationResult
+  skipped: string[]
+}
+
+export interface ScheduleVersionDetail extends ScheduleVersion {
+  snapshot: {
+    assignments: {
+      employee_id: number
+      date: string
+      shift_code: string
+      manually_modified: boolean
+    }[]
+  }
+  validation: ValidationResult | null
 }
 
 export interface ScheduleVersion {

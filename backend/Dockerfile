@@ -8,9 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# curl is used by the container healthcheck; libpq is needed by psycopg.
+# curl is used by the container healthcheck; libpq is needed by psycopg;
+# DejaVu gives the PDF export a font with Polish letters (ł, ś, ż...).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl libpq5 \
+    && apt-get install -y --no-install-recommends curl libpq5 fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./
