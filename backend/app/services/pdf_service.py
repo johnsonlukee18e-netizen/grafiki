@@ -6,14 +6,19 @@ and the schedule version.
 """
 from __future__ import annotations
 
+import logging
+import os
 from datetime import datetime
 from io import BytesIO
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     KeepTogether,
     PageBreak,
@@ -31,21 +36,77 @@ from app.services import planning
 from app.services.config_service import get_config
 from app.services.seniority import employee_color
 
-MONTHS_PL = (
-    "styczen",
-    "luty",
-    "marzec",
-    "kwiecien",
-    "maj",
-    "czerwiec",
-    "lipiec",
-    "sierpien",
-    "wrzesien",
-    "pazdziernik",
-    "listopad",
-    "grudzien",
+logger = logging.getLogger(__name__)
+
+#: Unicode TTF fonts tried in order. The built-in Helvetica only covers
+#: WinAnsi, so Polish letters such as "ł", "ś" or "ż" in employee names would
+#: come out as black boxes. The Docker image ships DejaVu (fonts-dejavu-core).
+FONT_CANDIDATES: tuple[tuple[str, str], ...] = (
+    (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ),
+    ("/usr/share/fonts/TTF/DejaVuSans.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"),
+    ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"),
+    ("/Library/Fonts/Arial Unicode.ttf", "/Library/Fonts/Arial Unicode.ttf"),
 )
-WEEKDAYS_PL = ("Pn", "Wt", "Sr", "Cz", "Pt", "So", "Nd")
+
+
+def _register_fonts() -> tuple[str, str]:
+    """Register a Unicode font family; fall back to Helvetica if none exists."""
+    override = os.environ.get("PDF_FONT_REGULAR"), os.environ.get("PDF_FONT_BOLD")
+    candidates = ((override,) if all(override) else ()) + FONT_CANDIDATES
+    for regular, bold in candidates:
+        if not (os.path.isfile(regular) and os.path.isfile(bold)):
+            continue
+        try:
+            pdfmetrics.registerFont(TTFont("AppSans", regular))
+            pdfmetrics.registerFont(TTFont("AppSans-Bold", bold))
+            pdfmetrics.registerFontFamily(
+                "AppSans",
+                normal="AppSans",
+                bold="AppSans-Bold",
+                italic="AppSans",
+                boldItalic="AppSans-Bold",
+            )
+        except Exception:  # pragma: no cover - a broken font file
+            logger.exception("Could not load PDF font %s", regular)
+            continue
+        return "AppSans", "AppSans-Bold"
+    logger.warning(
+        "No Unicode TTF font found for PDF export - Polish letters may not render. "
+        "Install fonts-dejavu-core or set PDF_FONT_REGULAR / PDF_FONT_BOLD."
+    )
+    return "Helvetica", "Helvetica-Bold"
+
+
+FONT, FONT_BOLD = _register_fonts()
+UNICODE_FONT = FONT != "Helvetica"
+
+MONTHS_PL = (
+    ("styczeń", "styczen"),
+    ("luty", "luty"),
+    ("marzec", "marzec"),
+    ("kwiecień", "kwiecien"),
+    ("maj", "maj"),
+    ("czerwiec", "czerwiec"),
+    ("lipiec", "lipiec"),
+    ("sierpień", "sierpien"),
+    ("wrzesień", "wrzesien"),
+    ("październik", "pazdziernik"),
+    ("listopad", "listopad"),
+    ("grudzień", "grudzien"),
+)
+WEEKDAYS_PL = ("Pn", "Wt", "Śr" if UNICODE_FONT else "Sr", "Cz", "Pt", "So", "Nd")
+
+
+def esc(value: object) -> str:
+    """Escape user data before it goes into ReportLab's mini-markup.
+
+    A department called "Chirurgia & Ortopedia" or a name with "<" would
+    otherwise break the paragraph parser and turn the export into a 500.
+    """
+    return escape(str(value))
 
 COLOR_MAP = {
     EmployeeColor.RED: colors.HexColor("#dc3545"),
@@ -60,11 +121,15 @@ GRID_COLOR = colors.HexColor("#adb5bd")
 
 
 def month_title(year: int, month: int) -> str:
-    return f"{MONTHS_PL[month - 1].capitalize()} {year}"
+    name = MONTHS_PL[month - 1][0 if UNICODE_FONT else 1]
+    return f"{name.capitalize()} {year}"
 
 
 def _styles():
     base = getSampleStyleSheet()
+    for style in base.byName.values():
+        if isinstance(style, ParagraphStyle):
+            style.fontName = FONT_BOLD if "Bold" in style.fontName else FONT
     return {
         "title": ParagraphStyle(
             "title", parent=base["Title"], fontSize=15, spaceAfter=2, alignment=TA_CENTER
@@ -101,7 +166,7 @@ def _document(buffer: BytesIO) -> SimpleDocTemplate:
 def _header(styles, config, schedule: Schedule, subtitle_extra: str = "") -> list:
     generated = datetime.now().strftime("%d.%m.%Y %H:%M")
     subtitle = (
-        f"{config.department_name} &nbsp;|&nbsp; wersja grafiku: v{schedule.version} "
+        f"{esc(config.department_name)} &nbsp;|&nbsp; wersja grafiku: v{schedule.version} "
         f"&nbsp;|&nbsp; status: {schedule.status.value} "
         f"&nbsp;|&nbsp; wygenerowano: {generated}"
     )
@@ -109,7 +174,7 @@ def _header(styles, config, schedule: Schedule, subtitle_extra: str = "") -> lis
         subtitle = f"{subtitle_extra}<br/>{subtitle}"
     return [
         Paragraph(
-            f"{config.facility_name} - grafik pracy - "
+            f"{esc(config.facility_name)} - grafik pracy - "
             f"{month_title(schedule.year, schedule.month)}",
             styles["title"],
         ),
@@ -151,7 +216,7 @@ def _grid_table(ctx, assignments, employees, styles) -> Table:
     shifts = ctx.shift_by_code
     for employee in employees:
         minutes = 0
-        row = [Paragraph(f"{employee.last_name} {employee.first_name}", styles["cell"])]
+        row = [Paragraph(esc(f"{employee.last_name} {employee.first_name}"), styles["cell"])]
         for day in days:
             code = by_key.get((employee.id, day))
             row.append(code or "W")
@@ -168,8 +233,9 @@ def _grid_table(ctx, assignments, employees, styles) -> Table:
 
     table = Table(data, colWidths=widths, repeatRows=2)
     style = [
+        ("FONTNAME", (0, 0), (-1, -1), FONT),
         ("FONTSIZE", (0, 0), (-1, -1), 6.5),
-        ("FONTNAME", (0, 0), (-1, 1), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, 1), FONT_BOLD),
         ("BACKGROUND", (0, 0), (-1, 1), HEADER_BG),
         ("TEXTCOLOR", (0, 0), (-1, 1), colors.white),
         ("ALIGN", (1, 0), (-1, -1), "CENTER"),
@@ -179,7 +245,7 @@ def _grid_table(ctx, assignments, employees, styles) -> Table:
         ("RIGHTPADDING", (0, 0), (-1, -1), 1),
         ("TOPPADDING", (0, 0), (-1, -1), 2),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-        ("FONTNAME", (-1, 2), (-1, -1), "Helvetica-Bold"),
+        ("FONTNAME", (-1, 2), (-1, -1), FONT_BOLD),
     ]
 
     for index, day in enumerate(days, start=1):
@@ -213,7 +279,7 @@ def _statistics_table(statistics, styles) -> Table:
     for row in statistics["employees"]:
         data.append(
             [
-                Paragraph(row["employee_name"], styles["cell"]),
+                Paragraph(esc(row["employee_name"]), styles["cell"]),
                 f"{row['hours_label']}",
                 str(row["shifts"].get("D", 0)),
                 str(row["shifts"].get("R", 0)),
@@ -230,8 +296,9 @@ def _statistics_table(statistics, styles) -> Table:
     table.setStyle(
         TableStyle(
             [
+                ("FONTNAME", (0, 0), (-1, -1), FONT),
                 ("FONTSIZE", (0, 0), (-1, -1), 7),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 0), (-1, 0), FONT_BOLD),
                 ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("ALIGN", (1, 0), (-1, -1), "CENTER"),
@@ -316,7 +383,7 @@ def render_employee_pdf(db: Session, schedule: Schedule, employee: Employee) -> 
         styles,
         config,
         schedule,
-        subtitle_extra=f"<b>{employee.full_name}</b> ({employee.role.value})",
+        subtitle_extra=f"<b>{esc(employee.full_name)}</b> ({employee.role.value})",
     )
 
     by_day = {a.day: a.shift_code for a in assignments}
@@ -347,8 +414,9 @@ def render_employee_pdf(db: Session, schedule: Schedule, employee: Employee) -> 
         repeatRows=1,
     )
     style = [
+        ("FONTNAME", (0, 0), (-1, -1), FONT),
         ("FONTSIZE", (0, 0), (-1, -1), 7.5),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, 0), FONT_BOLD),
         ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("ALIGN", (1, 0), (-1, -1), "CENTER"),

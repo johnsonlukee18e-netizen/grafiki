@@ -15,6 +15,11 @@ from app.models.enums import AvailabilityType
 from app.scheduler import rules
 from app.scheduler.models import PlanningContext
 
+#: Pre-solve findings that already prove the month cannot be scheduled.
+BLOCKING_CODES = frozenset(
+    {"NO_EMPLOYEES", "WEEK_CAPACITY", "DAY_UNDERSTAFFED", "DAY_NO_NURSES", "WEEK_NURSE_CAPACITY"}
+)
+
 
 @dataclass
 class Diagnostic:
@@ -39,7 +44,9 @@ def pre_solve_checks(ctx: PlanningContext) -> list[Diagnostic]:
     return [
         *_no_staff_at_all(ctx),
         *_daily_availability(ctx),
+        *_daily_nurses(ctx),
         *_weekly_capacity(ctx),
+        *_weekly_capacity(ctx, nurses_only=True),
     ]
 
 
@@ -85,7 +92,31 @@ def _daily_availability(ctx: PlanningContext) -> list[Diagnostic]:
     return out
 
 
-def _weekly_capacity(ctx: PlanningContext) -> list[Diagnostic]:
+def _daily_nurses(ctx: PlanningContext) -> list[Diagnostic]:
+    """A day where fewer nurses are available than the shifts require."""
+    needed = sum(s.minimum_nurses for s in ctx.shifts)
+    if needed <= 0:
+        return []
+    out: list[Diagnostic] = []
+    for day in ctx.days:
+        available = [e for e in ctx.employees if e.is_nurse and ctx.can_work(e, day)]
+        if len(available) >= needed:
+            continue
+        out.append(
+            Diagnostic(
+                code="DAY_NO_NURSES",
+                message=(
+                    f"{day.isoformat()}: zmiany wymagaja lacznie {needed} pielegniarek, "
+                    f"a dostepnych jest {len(available)}."
+                ),
+                day=day,
+                details={"required": needed, "available": len(available)},
+            )
+        )
+    return out
+
+
+def _weekly_capacity(ctx: PlanningContext, *, nurses_only: bool = False) -> list[Diagnostic]:
     """Minutes demanded by the minimum staffing vs. minutes the team may work."""
     out: list[Diagnostic] = []
     limit = ctx.config.weekly_minutes_limit
@@ -97,12 +128,16 @@ def _weekly_capacity(ctx: PlanningContext) -> list[Diagnostic]:
 
     for week, days in sorted(weeks.items()):
         demand = len(days) * sum(
-            shift.minimum_staff * shift.duration_minutes for shift in ctx.shifts
+            (shift.minimum_nurses if nurses_only else shift.minimum_staff)
+            * shift.duration_minutes
+            for shift in ctx.shifts
         )
+        if demand <= 0:
+            continue
         longest_shift = max((s.duration_minutes for s in ctx.shifts), default=0)
         capacity = 0
         for employee in ctx.employees:
-            if not employee.active:
+            if not employee.active or (nurses_only and not employee.is_nurse):
                 continue
             usable_days = sum(1 for d in days if ctx.can_work(employee, d))
             if not usable_days:
@@ -114,10 +149,12 @@ def _weekly_capacity(ctx: PlanningContext) -> list[Diagnostic]:
         if demand > capacity:
             out.append(
                 Diagnostic(
-                    code="WEEK_CAPACITY",
+                    code="WEEK_NURSE_CAPACITY" if nurses_only else "WEEK_CAPACITY",
                     message=(
-                        f"Tydzien {rules.week_label(week)}: minimalna obsada wymaga "
+                        f"Tydzien {rules.week_label(week)}: minimalna obsada "
+                        f"{'pielegniarska ' if nurses_only else ''}wymaga "
                         f"{rules.format_minutes_pl(demand)} pracy, a laczny limit zespolu "
+                        f"{'pielegniarek ' if nurses_only else ''}"
                         f"to {rules.format_minutes_pl(capacity)}."
                     ),
                     day=days[0],
@@ -161,12 +198,17 @@ def suggestions_for(diagnostics: list[Diagnostic], ctx: PlanningContext) -> list
             f"({rules.format_minutes_pl(ctx.config.weekly_minutes_limit)}) "
             "jest zgodny z umowami pracownikow."
         )
+    if "WEEK_NURSE_CAPACITY" in codes or "DAY_NO_NURSES" in codes:
+        out.append(
+            "Za malo pielegniarek, aby spelnic minimalna liczbe pielegniarek na zmianie. "
+            "Dodaj pielegniarki albo zmniejsz 'Min. pielegniarek' w USTAWIENIACH."
+        )
     if "DAY_UNDERSTAFFED" in codes:
         out.append(
             "Zweryfikuj zgloszone niedostepnosci w tych dniach - "
             "kazda niedostepnosc jest twardym ograniczeniem."
         )
-    if "CORE_MIN_STAFF" in codes:
+    if "CORE_MIN_STAFF" in codes or "CORE_MIN_NURSES" in codes:
         out.append(
             "W wskazanych dniach nie da sie obsadzic zmian bez zlamania odpoczynku, "
             "reguly po nocce lub limitu godzin. Rozwaz zwolnienie niedostepnosci "

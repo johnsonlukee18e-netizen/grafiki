@@ -106,8 +106,17 @@ export const api = {
 /** Download a PDF the browser way, keeping the session cookie attached. */
 export async function downloadFile(path: string, filename: string): Promise<void> {
   const response = await fetch(path, { credentials: 'same-origin' })
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT))
+  }
   if (!response.ok) {
-    throw new ApiError(response.status, friendlyMessage(response.status, null), null)
+    let payload: unknown = null
+    try {
+      payload = await response.json()
+    } catch {
+      /* not JSON */
+    }
+    throw new ApiError(response.status, friendlyMessage(response.status, payload), payload)
   }
   const blob = await response.blob()
   const url = URL.createObjectURL(blob)

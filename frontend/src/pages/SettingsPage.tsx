@@ -207,11 +207,12 @@ export default function SettingsPage() {
                     <input
                       type="number"
                       min={1}
-                      max={3600}
+                      max={75}
                       className="form-control"
                       value={form.solver_time_limit_seconds}
                       onChange={(e) => set('solver_time_limit_seconds', Number(e.target.value))}
                     />
+                    <div className="form-text">Maks. 75 s (limit proxy / Cloudflare).</div>
                   </div>
                   <div className="col-4">
                     <label className="form-label">Ziarno (seed)</label>
@@ -303,6 +304,9 @@ export default function SettingsPage() {
                       <th>Czas</th>
                       <th>Przez polnoc</th>
                       <th>Min. obsada</th>
+                      <th title="Ile osob z minimalnej obsady musi miec role pielegniarki">
+                        Min. pielegniarek
+                      </th>
                       <th>Aktywna</th>
                       <th />
                     </tr>
@@ -350,8 +354,27 @@ function ShiftRow({
     end_time: shift.end_time.slice(0, 5),
     duration_minutes: shift.duration_minutes,
     minimum_staff: shift.minimum_staff,
+    minimum_nurses: shift.minimum_nurses,
     active: shift.active,
   })
+
+  /** Wall-clock length of start..end, wrapping over midnight. */
+  function span(start: string, end: string): number {
+    const [sh, sm] = start.split(':').map(Number)
+    const [eh, em] = end.split(':').map(Number)
+    if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return draft.duration_minutes
+    const minutes = eh * 60 + em - (sh * 60 + sm)
+    return minutes <= 0 ? minutes + 24 * 60 : minutes
+  }
+
+  // Changing the hours used to keep the old duration, so e.g. moving the end
+  // of R from 14:35 to 15:00 silently left it counted as 7:35. Keep them in
+  // step; the duration can still be overridden by hand (e.g. unpaid breaks).
+  function setTimes(start: string, end: string) {
+    setDraft({ ...draft, start_time: start, end_time: end, duration_minutes: span(start, end) })
+  }
+
+  const nursesInvalid = draft.minimum_nurses > draft.minimum_staff
 
   const dirty =
     draft.name !== shift.name ||
@@ -359,6 +382,7 @@ function ShiftRow({
     draft.end_time !== shift.end_time.slice(0, 5) ||
     draft.duration_minutes !== shift.duration_minutes ||
     draft.minimum_staff !== shift.minimum_staff ||
+    draft.minimum_nurses !== shift.minimum_nurses ||
     draft.active !== shift.active
 
   return (
@@ -378,7 +402,7 @@ function ShiftRow({
           type="time"
           className="form-control form-control-sm"
           value={draft.start_time}
-          onChange={(e) => setDraft({ ...draft, start_time: e.target.value })}
+          onChange={(e) => setTimes(e.target.value, draft.end_time)}
         />
       </td>
       <td>
@@ -386,7 +410,7 @@ function ShiftRow({
           type="time"
           className="form-control form-control-sm"
           value={draft.end_time}
-          onChange={(e) => setDraft({ ...draft, end_time: e.target.value })}
+          onChange={(e) => setTimes(draft.start_time, e.target.value)}
         />
       </td>
       <td>
@@ -414,6 +438,19 @@ function ShiftRow({
         />
       </td>
       <td>
+        <input
+          type="number"
+          min={0}
+          max={draft.minimum_staff}
+          className={`form-control form-control-sm ${nursesInvalid ? 'is-invalid' : ''}`}
+          style={{ width: 80 }}
+          value={draft.minimum_nurses}
+          onChange={(e) => setDraft({ ...draft, minimum_nurses: Number(e.target.value) })}
+          title="Opiekunka nie zastapi pielegniarki - 0 wylacza regule"
+        />
+        {nursesInvalid && <div className="invalid-feedback">Wiecej niz obsada</div>}
+      </td>
+      <td>
         <div className="form-check form-switch">
           <input
             className="form-check-input"
@@ -427,7 +464,7 @@ function ShiftRow({
         {editable && (
           <button
             className="btn btn-sm btn-primary"
-            disabled={!dirty}
+            disabled={!dirty || nursesInvalid}
             onClick={() =>
               onSave({
                 name: draft.name,
@@ -435,6 +472,7 @@ function ShiftRow({
                 end_time: `${draft.end_time}:00`,
                 duration_minutes: draft.duration_minutes,
                 minimum_staff: draft.minimum_staff,
+                minimum_nurses: draft.minimum_nurses,
                 active: draft.active,
               })
             }

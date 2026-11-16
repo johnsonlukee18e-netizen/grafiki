@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
-from typing import Any
+from typing import Any, ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.config import settings
 from app.models.enums import (
     AvailabilityType,
     EmployeeColor,
@@ -20,6 +21,40 @@ class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PartialUpdate(BaseModel):
+    """Base for PUT payloads where every field is optional.
+
+    "Optional" means *may be omitted*, not *may be null*: the handlers apply
+    ``model_dump(exclude_unset=True)``, so an explicit ``null`` would reach a
+    NOT NULL column and surface as a 500 instead of a clear 422.
+    """
+
+    #: Fields for which ``null`` is a legitimate value (e.g. clearing a note).
+    nullable_fields: ClassVar[frozenset[str]] = frozenset()
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_explicit_null(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            nulls = [
+                key
+                for key, value in data.items()
+                if value is None and key in cls.model_fields and key not in cls.nullable_fields
+            ]
+            if nulls:
+                raise ValueError(f"Pole nie moze byc puste: {', '.join(sorted(nulls))}")
+        return data
+
+
+def _strip_required(value: str | None) -> str | None:
+    if value is None:
+        return value
+    cleaned = value.strip()
+    if not cleaned:
+        raise ValueError("Pole nie moze byc puste")
+    return cleaned
+
+
 # --- auth / users ---------------------------------------------------------
 class UserOut(ORMModel):
     id: int
@@ -32,7 +67,7 @@ class UserOut(ORMModel):
     created_at: datetime
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(PartialUpdate):
     role: UserRole | None = None
     is_active: bool | None = None
 
@@ -66,12 +101,17 @@ class EmployeeCreate(EmployeeBase):
     pass
 
 
-class EmployeeUpdate(BaseModel):
+class EmployeeUpdate(PartialUpdate):
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     role: EmployeeRole | None = None
     employment_date: date | None = None
     active: bool | None = None
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def _strip_names(cls, value: str | None) -> str | None:
+        return _strip_required(value)
 
 
 class EmployeeOut(ORMModel):
@@ -98,17 +138,36 @@ class ShiftOut(ORMModel):
     duration_minutes: int
     crosses_midnight: bool
     minimum_staff: int
+    minimum_nurses: int
     active: bool
     sort_order: int
 
 
-class ShiftUpdate(BaseModel):
-    name: str | None = Field(default=None, max_length=80)
+class ShiftUpdate(PartialUpdate):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
     start_time: time | None = None
     end_time: time | None = None
     duration_minutes: int | None = Field(default=None, gt=0, le=24 * 60)
     minimum_staff: int | None = Field(default=None, ge=0, le=50)
+    minimum_nurses: int | None = Field(default=None, ge=0, le=50)
     active: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, value: str | None) -> str | None:
+        return _strip_required(value)
+
+    @model_validator(mode="after")
+    def _nurses_within_staff(self) -> ShiftUpdate:
+        if (
+            self.minimum_staff is not None
+            and self.minimum_nurses is not None
+            and self.minimum_nurses > self.minimum_staff
+        ):
+            raise ValueError(
+                "Minimalna liczba pielegniarek nie moze byc wieksza niz minimalna obsada zmiany."
+            )
+        return self
 
 
 # --- availability ---------------------------------------------------------
@@ -130,7 +189,9 @@ class AvailabilityBulkCreate(BaseModel):
     note: str | None = Field(default=None, max_length=500)
 
 
-class AvailabilityUpdate(BaseModel):
+class AvailabilityUpdate(PartialUpdate):
+    nullable_fields: ClassVar[frozenset[str]] = frozenset({"note"})
+
     type: AvailabilityType | None = None
     note: str | None = Field(default=None, max_length=500)
 
@@ -240,6 +301,13 @@ class EditResponse(BaseModel):
     new_warnings: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class RestoreResponse(BaseModel):
+    schedule: ScheduleOut
+    validation: dict[str, Any]
+    #: Snapshot entries that could not be brought back (shift no longer active...).
+    skipped: list[str] = Field(default_factory=list)
+
+
 class ScheduleVersionOut(ORMModel):
     id: int
     schedule_id: int
@@ -280,7 +348,7 @@ class DepartmentConfigOut(ORMModel):
     weight_coverage_bonus: int
 
 
-class DepartmentConfigUpdate(BaseModel):
+class DepartmentConfigUpdate(PartialUpdate):
     facility_name: str | None = Field(default=None, min_length=1, max_length=200)
     department_name: str | None = Field(default=None, min_length=1, max_length=200)
     weekly_minutes_limit: int | None = Field(default=None, ge=60, le=7 * 24 * 60)
@@ -289,7 +357,11 @@ class DepartmentConfigUpdate(BaseModel):
     sunday_rule_mode: SundayRuleMode | None = None
     sunday_cycle_anchor: date | None = None
     sunday_includes_saturday_night: bool | None = None
-    solver_time_limit_seconds: int | None = Field(default=None, ge=1, le=3600)
+    #: Capped so a generation always finishes before the reverse proxy /
+    #: Cloudflare (100 s) drops the request - see SOLVER_MAX_SECONDS.
+    solver_time_limit_seconds: int | None = Field(
+        default=None, ge=1, le=settings.solver_max_seconds
+    )
     solver_seed: int | None = Field(default=None, ge=0)
     solver_workers: int | None = Field(default=None, ge=1, le=64)
     allow_overstaffing: bool | None = None

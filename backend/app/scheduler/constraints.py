@@ -82,6 +82,23 @@ def add_minimum_staffing(model: cp_model.CpModel, v: ModelVars, ctx: PlanningCon
                 model.Add(sum(candidates) == shift.minimum_staff)
 
 
+def nurse_candidates(v: ModelVars, ctx: PlanningContext, day: date, shift: ShiftDef) -> list:
+    return [
+        v.x[(e.id, day, shift.code)]
+        for e in ctx.employees
+        if e.is_nurse and (e.id, day, shift.code) in v.x
+    ]
+
+
+def add_minimum_nurses(model: cp_model.CpModel, v: ModelVars, ctx: PlanningContext) -> None:
+    """HARD 1b - at least ``minimum_nurses`` of the crew must be nurses."""
+    for day in ctx.days:
+        for shift in ctx.shifts:
+            if shift.minimum_nurses <= 0:
+                continue
+            model.Add(sum(nurse_candidates(v, ctx, day, shift)) >= shift.minimum_nurses)
+
+
 def add_weekly_limit(model: cp_model.CpModel, v: ModelVars, ctx: PlanningContext) -> None:
     """HARD 2 - 37:55 per Monday-Sunday week, carried across month borders."""
     shift_by_code = ctx.shift_by_code
@@ -231,6 +248,7 @@ def _boundary_works_sunday(
 def add_all_hard_constraints(model: cp_model.CpModel, v: ModelVars, ctx: PlanningContext) -> None:
     add_one_shift_per_day(model, v, ctx)
     add_minimum_staffing(model, v, ctx)
+    add_minimum_nurses(model, v, ctx)
     add_weekly_limit(model, v, ctx)
     add_rest_and_night_rules(model, v, ctx)
     add_sunday_rule(model, v, ctx)

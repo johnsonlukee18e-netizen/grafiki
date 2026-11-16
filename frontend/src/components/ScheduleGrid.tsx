@@ -64,14 +64,17 @@ export default function ScheduleGrid({
     return map
   }, [shifts])
 
-  const coverage = useMemo(() => {
-    const map = new Map<string, number>()
+  const { coverage, nurseCoverage } = useMemo(() => {
+    const nurses = new Set(employees.filter((e) => e.role === 'NURSE').map((e) => e.id))
+    const all = new Map<string, number>()
+    const onlyNurses = new Map<string, number>()
     for (const a of assignments) {
       const key = `${a.work_date}|${a.shift_code}`
-      map.set(key, (map.get(key) ?? 0) + 1)
+      all.set(key, (all.get(key) ?? 0) + 1)
+      if (nurses.has(a.employee_id)) onlyNurses.set(key, (onlyNurses.get(key) ?? 0) + 1)
     }
-    return map
-  }, [assignments])
+    return { coverage: all, nurseCoverage: onlyNurses }
+  }, [assignments, employees])
 
   return (
     <div className="schedule-scroll border rounded bg-white">
@@ -196,13 +199,28 @@ export default function ScheduleGrid({
           {shifts.map((shift) => (
             <tr className="coverage-row" key={`coverage-${shift.code}`}>
               <td className="name-cell">
-                Obsada {shift.code} <span className="text-secondary">(min {shift.minimum_staff})</span>
+                Obsada {shift.code}{' '}
+                <span className="text-secondary">
+                  (min {shift.minimum_staff}
+                  {shift.minimum_nurses > 0 && `, w tym ${shift.minimum_nurses} piel.`})
+                </span>
               </td>
               {days.map((day) => {
-                const count = coverage.get(`${day.date}|${shift.code}`) ?? 0
+                const key = `${day.date}|${shift.code}`
+                const count = coverage.get(key) ?? 0
+                const nurses = nurseCoverage.get(key) ?? 0
+                const short =
+                  count < shift.minimum_staff || nurses < (shift.minimum_nurses ?? 0)
                 return (
-                  <td key={day.date} className={count < shift.minimum_staff ? 'short' : undefined}>
+                  <td
+                    key={day.date}
+                    className={short ? 'short' : undefined}
+                    title={`${count} os., w tym ${nurses} pielegniarek`}
+                  >
                     {count}
+                    {shift.minimum_nurses > 0 && (
+                      <div className="coverage-nurses">{nurses}P</div>
+                    )}
                   </td>
                 )
               })}

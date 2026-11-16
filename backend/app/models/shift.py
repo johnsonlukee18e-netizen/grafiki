@@ -21,12 +21,22 @@ class Shift(Base, TimestampMixin):
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     crosses_midnight: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     minimum_staff: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
+    #: How many of ``minimum_staff`` must be nurses (NURSE role). A care
+    #: worker cannot replace a nurse, so a shift staffed only by care workers
+    #: is not safely covered. 0 keeps the rule switched off.
+    minimum_nurses: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     __table_args__ = (
         CheckConstraint("duration_minutes > 0", name="ck_shift_duration_positive"),
         CheckConstraint("minimum_staff >= 0", name="ck_shift_min_staff_nonneg"),
+        CheckConstraint(
+            "minimum_nurses >= 0 AND minimum_nurses <= minimum_staff",
+            name="ck_shift_min_nurses_range",
+        ),
     )
 
     def __repr__(self) -> str:  # pragma: no cover

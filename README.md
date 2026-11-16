@@ -54,6 +54,7 @@ z bledem twardego ograniczenia **nie moze** zostac zatwierdzony.
 | # | Regula | Domyslnie | Konfigurowalne |
 | - | ------ | --------- | -------------- |
 | 1 | Minimalna obsada na kazdej zmianie | 2 osoby na D, R i N | tak (per zmiana) |
+| 1b | Minimalna liczba pielegniarek w obsadzie zmiany | 1 (nowe instalacje), 0 = wylaczone | tak (per zmiana) |
 | 2 | Maksymalny tygodniowy czas pracy | 37:55 (2275 minut) | tak |
 | 3 | Minimalny odpoczynek miedzy zmianami | 11 h (660 minut) | tak |
 | 4 | Po nocce tylko wolne albo kolejna noc | - | - |
@@ -710,6 +711,7 @@ Operacje modyfikujace wymagaja naglowka `X-CSRF-Token` zgodnego z ciasteczkiem
 | POST | `/api/schedules/generate` | MANAGER |
 | POST | `/api/schedules/{id}/validate`, `/approve`, `/unapprove` | MANAGER |
 | GET | `/api/schedules/{id}/history`, `/history/{version}`, `/statistics` | MANAGER |
+| POST | `/api/schedules/{id}/history/{version}/restore` | MANAGER |
 | GET | `/api/schedules/{id}/pdf` | MANAGER |
 | GET | `/api/schedules/{id}/employee/{employee_id}/pdf` | MANAGER |
 | POST/PUT/DELETE | `/api/assignments`, `/api/assignments/{id}` | MANAGER |
@@ -784,7 +786,34 @@ a jedynym certyfikatem widocznym z zewnatrz jest certyfikat Cloudflare. Patrz
 [Reverse proxy i TLS](#reverse-proxy-i-tls-vps).
 
 **Historia.** Kazda generacja i kazda reczna korekta zapisuje pelny zrzut
-grafiku w `schedule_versions`. Nic nie jest kasowane bezpowrotnie.
+grafiku w `schedule_versions`. Nic nie jest kasowane bezpowrotnie. W panelu
+*Historia grafikow* kazda wersje mozna podejrzec i przywrocic - przywrocenie
+samo jest nowa wersja (biezacy stan trafia najpierw do historii), a wynik jest
+od razu walidowany wedlug aktualnych danych.
+
+**Pielegniarki na zmianie.** Opiekunka nie zastapi pielegniarki, dlatego kazda
+zmiana ma oprocz minimalnej obsady takze `minimum_nurses` (Ustawienia ->
+Zmiany -> *Min. pielegniarek*). Migracja ustawia 0 dla istniejacych baz, zeby
+nie zmienic dzialania dotychczasowych grafikow; seed nowej instalacji ustawia 1.
+
+**Limit czasu solvera.** Generowanie dziala w ramach zadania HTTP, a Cloudflare
+zrywa je po 100 s (blad 524). Limit w Ustawieniach jest wiec ograniczony do
+`SOLVER_MAX_SECONDS` (domyslnie 75 s).
+
+**Aktualnosc walidacji.** Otwarcie grafiku zawsze pokazuje walidacje
+policzona od nowa (dostepnosci, pracownicy i sasiednie miesiace mogly sie
+zmienic). Status grafiku edytowalnego jest aktualizowany; grafik zatwierdzony
+nie zmienia statusu od samego otwarcia - pokazuje jedynie aktualne bledy.
+Pracownik nieaktywny w miesiacach, ktore juz minely, nie jest bledem.
+
+**Rownolegla praca.** Dwa jednoczesne generowania tego samego miesiaca sa
+blokowane (advisory lock PostgreSQL - drugie dostaje komunikat), a reczne
+korekty jednego grafiku sa wykonywane po kolei (blokada wiersza).
+
+**PDF i polskie znaki.** Eksport uzywa czcionki DejaVu Sans (pakiet
+`fonts-dejavu-core` w obrazie), bo wbudowana Helvetica nie ma liter "l", "s",
+"z" z ogonkami/kreska. Inna czcionke wskazuja `PDF_FONT_REGULAR` i
+`PDF_FONT_BOLD`.
 
 **Audyt.** Logowanie, wylogowanie, operacje na pracownikach, dostepnosci,
 generowanie, reczne zmiany, zatwierdzanie, eksport PDF, zmiany ustawien i rol

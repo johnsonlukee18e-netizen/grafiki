@@ -36,6 +36,7 @@ export default function SchedulePage() {
   const [month, setMonth] = useState(Number(params.get('month')) || initial.month)
   const [cell, setCell] = useState<CellTarget | null>(null)
   const [solverReport, setSolverReport] = useState<SolverResult | null>(null)
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false)
   const [highlight, setHighlight] = useState<{ employeeId: number | null; date: string | null }>({
     employeeId: null,
     date: null,
@@ -87,7 +88,17 @@ export default function SchedulePage() {
     toasts.error('Blad', fallback)
   }
 
+  /** Regenerating replaces the whole roster - ask first when there is one. */
+  function requestGenerate() {
+    if (data && data.assignments.length > 0) {
+      setConfirmRegenerate(true)
+      return
+    }
+    runGenerate()
+  }
+
   function runGenerate() {
+    setConfirmRegenerate(false)
     generate.mutate(
       { year, month },
       {
@@ -197,7 +208,7 @@ export default function SchedulePage() {
                 setHighlight({ employeeId: null, date: null })
               }}
             />
-            <button className="btn btn-primary" onClick={runGenerate} disabled={busy} type="button">
+            <button className="btn btn-primary" onClick={requestGenerate} disabled={busy} type="button">
               {generate.isPending ? (
                 <span className="spinner-border spinner-border-sm me-1" />
               ) : (
@@ -218,6 +229,7 @@ export default function SchedulePage() {
                             ? 'Grafik spelnia wszystkie twarde ograniczenia.'
                             : `Wykryto ${response.validation.errors.length} bledow.`,
                         ),
+                      onError: (err) => reportBlocked(err, 'Nie udalo sie zwalidowac grafiku.'),
                     })
                   }
                   disabled={busy}
@@ -231,7 +243,11 @@ export default function SchedulePage() {
                     onClick={() =>
                       approve.mutate(
                         { id: schedule.id, undo: true },
-                        { onSuccess: () => toasts.success('Cofnieto zatwierdzenie') },
+                        {
+                          onSuccess: () => toasts.success('Cofnieto zatwierdzenie'),
+                          onError: (err) =>
+                            reportBlocked(err, 'Nie udalo sie cofnac zatwierdzenia.'),
+                        },
                       )
                     }
                     disabled={busy}
@@ -264,7 +280,12 @@ export default function SchedulePage() {
                     downloadFile(
                       `/api/schedules/${schedule.id}/pdf`,
                       `grafik_${year}_${String(month).padStart(2, '0')}.pdf`,
-                    ).catch(() => toasts.error('Blad', 'Nie udalo sie pobrac PDF.'))
+                    ).catch((err: unknown) =>
+                      toasts.error(
+                        'Nie udalo sie pobrac PDF',
+                        err instanceof ApiError ? err.message : undefined,
+                      ),
+                    )
                   }
                   type="button"
                 >
@@ -410,6 +431,43 @@ export default function SchedulePage() {
             </div>
           </div>
         </>
+      )}
+
+      {confirmRegenerate && data && (
+        <Modal
+          title="Wygenerowac grafik od nowa?"
+          onClose={() => setConfirmRegenerate(false)}
+          footer={
+            <>
+              <button
+                className="btn btn-outline-secondary"
+                onClick={() => setConfirmRegenerate(false)}
+                type="button"
+              >
+                Anuluj
+              </button>
+              <button className="btn btn-primary" onClick={runGenerate} type="button">
+                <i className="bi bi-cpu me-1" /> Generuj od nowa
+              </button>
+            </>
+          }
+        >
+          <p>
+            Solver ulozy caly miesiac od poczatku i zastapi obecny grafik ({data.assignments.length}{' '}
+            zmian).
+          </p>
+          {data.assignments.some((a) => a.manually_modified) && (
+            <div className="alert alert-warning py-2 small">
+              <i className="bi bi-exclamation-triangle me-1" />
+              Obecny grafik zawiera{' '}
+              {data.assignments.filter((a) => a.manually_modified).length} recznie poprawionych
+              zmian - nie zostana zachowane w nowym grafiku.
+            </div>
+          )}
+          <p className="small text-secondary mb-0">
+            Obecna wersja zostanie zapisana w Historii i bedzie mozna ja przywrocic.
+          </p>
+        </Modal>
       )}
 
       {cell && (

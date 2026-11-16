@@ -20,6 +20,7 @@ from app.scheduler.statistics import build_statistics
 #: Order of the checklist shown in the validation panel.
 CHECKS: tuple[tuple[str, str], ...] = (
     (rules.RULE_MIN_STAFF, "Minimalna obsada"),
+    (rules.RULE_MIN_NURSES, "Pielegniarki na zmianie"),
     (rules.RULE_WEEKLY_LIMIT, "Tygodniowy limit godzin"),
     (rules.RULE_MIN_REST, "Minimalny odpoczynek"),
     (rules.RULE_AFTER_NIGHT, "Regula po nocce"),
@@ -88,6 +89,7 @@ def validate(ctx: PlanningContext, assignments: list[PlannedAssignment]) -> Vali
     errors += _check_unknown_references(ctx, in_window)
     errors += _check_one_shift_per_day(in_window, name_of)
     errors += _check_minimum_staffing(ctx, in_window)
+    errors += _check_minimum_nurses(ctx, in_window)
     errors += _check_availability(ctx, in_window, name_of)
     errors += _check_employment(ctx, in_window, name_of)
     errors += _check_weekly_limit(ctx, combined, name_of)
@@ -194,6 +196,38 @@ def _check_minimum_staffing(
     return out
 
 
+def _check_minimum_nurses(
+    ctx: PlanningContext, assignments: list[PlannedAssignment]
+) -> list[Violation]:
+    employees = ctx.employee_by_id
+    counts: dict[tuple[date, str], int] = defaultdict(int)
+    for item in assignments:
+        employee = employees.get(item.employee_id)
+        if employee is not None and employee.is_nurse:
+            counts[(item.day, item.shift_code)] += 1
+    out: list[Violation] = []
+    for day in ctx.days:
+        for shift in ctx.shifts:
+            if shift.minimum_nurses <= 0:
+                continue
+            actual = counts[(day, shift.code)]
+            if actual < shift.minimum_nurses:
+                out.append(
+                    Violation(
+                        code=rules.RULE_MIN_NURSES,
+                        severity="error",
+                        message=(
+                            f"{day.isoformat()}: na zmianie {shift.code} sa {actual} "
+                            f"pielegniarki przy wymaganym minimum {shift.minimum_nurses}."
+                        ),
+                        day=day,
+                        shift_code=shift.code,
+                        details={"required": shift.minimum_nurses, "actual": actual},
+                    )
+                )
+    return out
+
+
 def _check_availability(
     ctx: PlanningContext, assignments: list[PlannedAssignment], name_of
 ) -> list[Violation]:
@@ -240,7 +274,9 @@ def _check_employment(
                     shift_code=item.shift_code,
                 )
             )
-        if not employee.active:
+        # Someone who left may legitimately appear in the months they worked;
+        # only future days of an inactive employee are a planning error.
+        if not employee.active and (ctx.today is None or item.day >= ctx.today):
             out.append(
                 Violation(
                     code=rules.RULE_INACTIVE,

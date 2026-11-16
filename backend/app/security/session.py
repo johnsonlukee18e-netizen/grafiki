@@ -103,9 +103,12 @@ def read_session(request: Request) -> SessionData | None:
     except (SignatureExpired, BadSignature, ValueError):
         return None
     try:
-        return SessionData.from_payload(payload)
+        data = SessionData.from_payload(payload)
     except (KeyError, TypeError, ValueError):
         return None
+    if int(time.time()) - data.issued_at > settings.session_absolute_max_seconds:
+        return None
+    return data
 
 
 def refresh_session(response: Response, data: SessionData) -> None:

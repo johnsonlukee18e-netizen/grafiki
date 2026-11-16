@@ -81,6 +81,7 @@ export const ACTION_LABEL: Record<string, string> = {
   SCHEDULE_GENERATED: 'Wygenerowanie grafiku',
   SCHEDULE_VALIDATED: 'Walidacja grafiku',
   SCHEDULE_APPROVED: 'Zatwierdzenie grafiku',
+  SCHEDULE_RESTORED: 'Przywrocenie wersji grafiku',
   ASSIGNMENT_CREATED: 'Dodanie zmiany',
   ASSIGNMENT_MOVED: 'Przeniesienie zmiany',
   ASSIGNMENT_UPDATED: 'Edycja zmiany',
