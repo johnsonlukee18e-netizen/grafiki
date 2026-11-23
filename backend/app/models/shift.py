@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import time
 
 from sqlalchemy import Boolean, CheckConstraint, Integer, String, Time
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base, TimestampMixin
@@ -26,6 +27,11 @@ class Shift(Base, TimestampMixin):
     #: is not safely covered. 0 keeps the rule switched off.
     minimum_nurses: Mapped[int] = mapped_column(
         Integer, default=0, server_default="0", nullable=False
+    )
+    #: The shift exists only on working days: never on a Saturday, Sunday or
+    #: public holiday (the morning shift R by default).
+    workdays_only: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=sa_false(), nullable=False
     )
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

@@ -42,15 +42,16 @@ def boundary_map(ctx: PlanningContext) -> dict[tuple[int, date], str]:
 def create_variables(model: cp_model.CpModel, ctx: PlanningContext) -> ModelVars:
     """One boolean per (employee, day, shift) that is at all possible.
 
-    HARD 6 (unavailability), the employment date and inactive employees are
-    handled by simply not creating the variable.
+    HARD 6 (unavailability), the employment date, inactive employees and
+    working-days-only shifts on weekends / holidays are handled by simply not
+    creating the variable.
     """
     variables = ModelVars()
     for employee in ctx.employees:
         for day in ctx.days:
             if not ctx.can_work(employee, day):
                 continue
-            for shift in ctx.shifts:
+            for shift in ctx.shifts_on(day):
                 key = (employee.id, day, shift.code)
                 name = f"x_{employee.id}_{day.isoformat()}_{shift.code}"
                 variables.x[key] = model.NewBoolVar(name)
@@ -68,7 +69,7 @@ def add_one_shift_per_day(model: cp_model.CpModel, v: ModelVars, ctx: PlanningCo
 def add_minimum_staffing(model: cp_model.CpModel, v: ModelVars, ctx: PlanningContext) -> None:
     """HARD 1 - at least ``minimum_staff`` people on every open shift."""
     for day in ctx.days:
-        for shift in ctx.shifts:
+        for shift in ctx.shifts_on(day):
             if shift.minimum_staff <= 0:
                 continue
             candidates = [
@@ -93,7 +94,7 @@ def nurse_candidates(v: ModelVars, ctx: PlanningContext, day: date, shift: Shift
 def add_minimum_nurses(model: cp_model.CpModel, v: ModelVars, ctx: PlanningContext) -> None:
     """HARD 1b - at least ``minimum_nurses`` of the crew must be nurses."""
     for day in ctx.days:
-        for shift in ctx.shifts:
+        for shift in ctx.shifts_on(day):
             if shift.minimum_nurses <= 0:
                 continue
             model.Add(sum(nurse_candidates(v, ctx, day, shift)) >= shift.minimum_nurses)

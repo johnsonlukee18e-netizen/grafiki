@@ -55,6 +55,7 @@ def to_shift_def(shift: Shift) -> ShiftDef:
         crosses_midnight=shift.crosses_midnight,
         minimum_staff=shift.minimum_staff,
         minimum_nurses=shift.minimum_nurses,
+        workdays_only=shift.workdays_only,
     )
 
 

@@ -19,6 +19,7 @@ from app.models import (
     AuditAction,
     Employee,
     Schedule,
+    ScheduleMode,
     ScheduleStatus,
     ScheduleVersion,
     Shift,
@@ -199,10 +200,19 @@ def current_validation(
     approved / archived ones are only re-checked, never silently re-labelled
     by somebody merely opening the page.
     """
-    if schedule.is_editable:
+    if schedule.is_editable and not is_manual_draft(schedule):
         return run_validation(db, schedule, ctx)
     context = ctx or build_context_for(db, schedule)
     return validate(context, planning.load_assignments(db, schedule.id))
+
+
+def is_manual_draft(schedule: Schedule) -> bool:
+    """A hand-built roster the manager has not sent for checking yet.
+
+    Its rules are checked only on request ("Wyslij do sprawdzenia"), so
+    merely opening the page must not turn it VALID / INVALID.
+    """
+    return schedule.mode is ScheduleMode.MANUAL and schedule.status is ScheduleStatus.DRAFT
 
 
 # --- generation -----------------------------------------------------------
@@ -260,6 +270,9 @@ def generate_schedule(
         _bump_version(db, schedule, "Ponowne wygenerowanie grafiku", user)
 
     replace_assignments(db, schedule, result.assignments)
+    if schedule.mode is not ScheduleMode.AUTO:
+        # Generating on purpose ends manual building for this month.
+        schedule.mode = ScheduleMode.AUTO
     schedule.status = ScheduleStatus.GENERATED
     schedule.generated_at = datetime.now(UTC)
     schedule.solver_status = result.status
@@ -712,3 +725,145 @@ def restore_version(
         },
     )
     return validation, skipped
+
+
+# --- manual building ("Reczne ukladanie") --------------------------------
+@dataclass(frozen=True)
+class CellChange:
+    """One cell of the grid: ``shift_code`` None means a day off (W)."""
+
+    employee_id: int
+    day: date
+    shift_code: str | None
+
+
+def _require_open_for_manual(schedule: Schedule) -> None:
+    if schedule.status is ScheduleStatus.APPROVED:
+        raise ScheduleError(
+            "Grafik jest zatwierdzony. Cofnij zatwierdzenie, aby dalej ukladac go recznie."
+        )
+    if schedule.status is ScheduleStatus.ARCHIVED:
+        raise ScheduleError("Grafik jest zarchiwizowany i tylko do odczytu.")
+
+
+def start_manual(db: Session, year: int, month: int, user: User | None) -> Schedule:
+    """Switch a month to manual building (creating an empty schedule if needed).
+
+    An existing roster is kept as the starting point - the manager may take a
+    generated schedule and continue by hand.
+    """
+    if not try_lock_month_generation(db, year, month):
+        raise ScheduleError(
+            "Grafik na ten miesiac jest wlasnie generowany. Poczekaj na wynik i odswiez strone."
+        )
+    schedule = lock_schedule(db, get_or_create(db, year, month, user))
+    _require_open_for_manual(schedule)
+    if schedule.mode is ScheduleMode.MANUAL:
+        return schedule
+    schedule.mode = ScheduleMode.MANUAL
+    has_roster = (
+        db.scalar(select(Assignment.id).where(Assignment.schedule_id == schedule.id).limit(1))
+        is not None
+    )
+    if not has_roster:
+        schedule.status = ScheduleStatus.DRAFT
+    db.flush()
+    audit_service.record(
+        db,
+        AuditAction.SCHEDULE_MODE_CHANGED,
+        user=user,
+        entity_type="schedule",
+        entity_id=schedule.id,
+        metadata={"mode": ScheduleMode.MANUAL.value, "kept_roster": has_roster},
+    )
+    return schedule
+
+
+def set_cells(
+    db: Session, schedule: Schedule, cells: list[CellChange], user: User | None
+) -> int:
+    """Apply hand-made changes without the hard-constraint gate.
+
+    In manual building the manager is free to arrange the month in any order;
+    the rules are checked when the work is sent for checking. The first edit
+    after a check (or after generation) snapshots that checked state into the
+    history, so finished work is never lost; edits in between are a draft.
+
+    Returns the number of cells that actually changed.
+    """
+    lock_schedule(db, schedule)
+    db.expire_all()
+    if schedule.mode is not ScheduleMode.MANUAL:
+        raise ScheduleError(
+            "Ten grafik nie jest w trybie recznego ukladania. Otworz go w module "
+            "RECZNE UKLADANIE.",
+        )
+    _require_open_for_manual(schedule)
+
+    shifts = shift_by_code(db)
+    employee_ids = set(db.scalars(select(Employee.id)))
+    seen: set[tuple[int, date]] = set()
+    for cell in cells:
+        _require_in_month(schedule, cell.day)
+        if cell.employee_id not in employee_ids:
+            raise ScheduleError("Nie znaleziono pracownika.", status=404)
+        if cell.shift_code is not None and cell.shift_code not in shifts:
+            raise ScheduleError(f"Nieznana zmiana '{cell.shift_code}'.", status=400)
+        key = (cell.employee_id, cell.day)
+        if key in seen:
+            raise ScheduleError(
+                "Ta sama komorka grafiku wystepuje dwa razy w jednej operacji.", status=400
+            )
+        seen.add(key)
+
+    current = {
+        (row.employee_id, row.work_date): row
+        for row in db.scalars(select(Assignment).where(Assignment.schedule_id == schedule.id))
+    }
+    pending: list[CellChange] = []
+    for cell in cells:
+        row = current.get((cell.employee_id, cell.day))
+        existing_code = row.shift.code if row is not None else None
+        if existing_code != cell.shift_code:
+            pending.append(cell)
+    if not pending:
+        return 0
+
+    if schedule.status is not ScheduleStatus.DRAFT and current:
+        _bump_version(db, schedule, "Reczne ukladanie - zmiany po sprawdzeniu", user)
+
+    for cell in pending:
+        row = current.get((cell.employee_id, cell.day))
+        if row is not None:
+            db.delete(row)
+    db.flush()
+    for cell in pending:
+        if cell.shift_code is not None:
+            db.add(
+                _build_assignment(
+                    schedule, cell.employee_id, shifts[cell.shift_code], cell.day, manual=True
+                )
+            )
+    schedule.status = ScheduleStatus.DRAFT
+    schedule.validation = None
+    db.flush()
+
+    audit_service.record(
+        db,
+        AuditAction.SCHEDULE_MANUAL_EDIT,
+        user=user,
+        entity_type="schedule",
+        entity_id=schedule.id,
+        metadata={
+            "cells": len(pending),
+            "sample": [
+                {
+                    "employee_id": c.employee_id,
+                    "date": c.day.isoformat(),
+                    "shift_code": c.shift_code or "W",
+                }
+                for c in pending[:20]
+            ],
+        },
+    )
+    return len(pending)

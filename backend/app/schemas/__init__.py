@@ -11,6 +11,7 @@ from app.models.enums import (
     AvailabilityType,
     EmployeeColor,
     EmployeeRole,
+    ScheduleMode,
     ScheduleStatus,
     UserRole,
 )
@@ -139,6 +140,7 @@ class ShiftOut(ORMModel):
     crosses_midnight: bool
     minimum_staff: int
     minimum_nurses: int
+    workdays_only: bool
     active: bool
     sort_order: int
 
@@ -150,6 +152,7 @@ class ShiftUpdate(PartialUpdate):
     duration_minutes: int | None = Field(default=None, gt=0, le=24 * 60)
     minimum_staff: int | None = Field(default=None, ge=0, le=50)
     minimum_nurses: int | None = Field(default=None, ge=0, le=50)
+    workdays_only: bool | None = None
     active: bool | None = None
 
     @field_validator("name")
@@ -237,6 +240,7 @@ class ScheduleOut(ORMModel):
     year: int
     month: int
     status: ScheduleStatus
+    mode: ScheduleMode
     version: int
     generated_at: datetime | None = None
     approved_at: datetime | None = None
@@ -299,6 +303,32 @@ class EditResponse(BaseModel):
     schedule: ScheduleOut
     validation: dict[str, Any]
     new_warnings: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ManualStartRequest(BaseModel):
+    year: int = Field(ge=2000, le=2100)
+    month: int = Field(ge=1, le=12)
+
+
+class CellChangeIn(BaseModel):
+    employee_id: int
+    date: date
+    #: ``null`` (or "W") clears the cell - a day off.
+    shift_code: str | None = Field(default=None, min_length=1, max_length=4)
+
+    @field_validator("shift_code")
+    @classmethod
+    def _off_is_empty(cls, value: str | None) -> str | None:
+        return None if value in (None, "W") else value
+
+
+class CellsUpdate(BaseModel):
+    cells: list[CellChangeIn] = Field(min_length=1, max_length=2000)
+
+
+class CellsResponse(BaseModel):
+    schedule: ScheduleOut
+    changed: int
 
 
 class RestoreResponse(BaseModel):

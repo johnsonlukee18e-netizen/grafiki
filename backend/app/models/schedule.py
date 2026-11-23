@@ -22,7 +22,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
-from app.models.enums import ScheduleStatus
+from app.models.enums import ScheduleMode, ScheduleStatus
 
 
 class Schedule(Base, TimestampMixin):
@@ -37,6 +37,12 @@ class Schedule(Base, TimestampMixin):
         nullable=False,
     )
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    mode: Mapped[ScheduleMode] = mapped_column(
+        SAEnum(ScheduleMode, name="schedule_mode"),
+        default=ScheduleMode.AUTO,
+        server_default=ScheduleMode.AUTO.value,
+        nullable=False,
+    )
     generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))

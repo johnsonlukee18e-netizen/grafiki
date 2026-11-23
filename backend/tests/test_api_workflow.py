@@ -13,16 +13,30 @@ YEAR, MONTH = 2026, 9
 
 
 def pick_removable(grid) -> dict:
-    """An assignment whose shift is staffed above the minimum, so it may go."""
+    """An assignment whose shift stays above both minimums without it.
+
+    Removing it must leave enough people *and* enough nurses on that shift.
+    """
     minimums = {s["code"]: s["minimum_staff"] for s in grid["shifts"]}
+    nurse_minimums = {s["code"]: s.get("minimum_nurses", 0) for s in grid["shifts"]}
+    nurses = {e["id"] for e in grid["employees"] if e["role"] == "NURSE"}
     counts: dict[tuple[str, str], int] = {}
+    nurse_counts: dict[tuple[str, str], int] = {}
     for a in grid["assignments"]:
         key = (a["work_date"], a["shift_code"])
         counts[key] = counts.get(key, 0) + 1
+        if a["employee_id"] in nurses:
+            nurse_counts[key] = nurse_counts.get(key, 0) + 1
     for a in grid["assignments"]:
         key = (a["work_date"], a["shift_code"])
-        if counts[key] > minimums[a["shift_code"]]:
-            return a
+        if counts[key] <= minimums[a["shift_code"]]:
+            continue
+        if (
+            a["employee_id"] in nurses
+            and nurse_counts.get(key, 0) <= nurse_minimums[a["shift_code"]]
+        ):
+            continue
+        return a
     raise AssertionError("the roster is at the bare minimum everywhere")
 
 

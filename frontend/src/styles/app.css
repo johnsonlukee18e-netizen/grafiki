@@ -283,3 +283,34 @@ body {
   top: 0;
   z-index: 1;
 }
+
+/* a suggestion from an employee's request (manual building) */
+.shift-chip.ghost {
+  opacity: 0.45;
+  outline: 1px dashed currentColor;
+  outline-offset: -2px;
+}
+
+.brush-btn.active {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.35);
+}
+
+.legend-swatch.preferred-dot {
+  position: relative;
+  background: transparent;
+}
+.legend-swatch.preferred-dot::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fd7e14;
+}
+
+.suggestion-list {
+  max-height: 420px;
+  overflow-y: auto;
+}

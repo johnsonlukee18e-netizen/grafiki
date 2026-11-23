@@ -160,7 +160,7 @@ def _infeasibility_core(ctx: PlanningContext) -> list[diag.Diagnostic]:
 
     literals: dict[cp_model.IntVar, tuple[date, str, int, bool]] = {}
     for day in ctx.days:
-        for shift in ctx.shifts:
+        for shift in ctx.shifts_on(day):
             if shift.minimum_staff <= 0:
                 continue
             candidates = [

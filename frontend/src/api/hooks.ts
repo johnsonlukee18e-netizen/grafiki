@@ -142,6 +142,37 @@ export function useGenerate() {
   })
 }
 
+export interface CellChange {
+  employee_id: number
+  date: string
+  /** null = day off (W) */
+  shift_code: string | null
+}
+
+/** RECZNE UKLADANIE: switch a month to manual building. */
+export function useStartManual() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { year: number; month: number }) =>
+      api.post<Schedule>('/api/schedules/manual', input),
+    onSuccess: () => client.invalidateQueries(),
+  })
+}
+
+/** Set cells freely - no rule gate; rules are checked on "send for checking". */
+export function useSetCells() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, cells }: { id: number; cells: CellChange[] }) =>
+      api.put<{ schedule: Schedule; changed: number }>(`/api/schedules/${id}/cells`, { cells }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['schedule'] })
+      client.invalidateQueries({ queryKey: ['dashboard'] })
+      client.invalidateQueries({ queryKey: keys.schedules })
+    },
+  })
+}
+
 export function useValidate() {
   const client = useQueryClient()
   return useMutation({

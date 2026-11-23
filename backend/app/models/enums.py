@@ -46,6 +46,16 @@ class ScheduleStatus(str, enum.Enum):
     ARCHIVED = "ARCHIVED"
 
 
+class ScheduleMode(str, enum.Enum):
+    """How the roster of a month is built."""
+
+    #: OR-Tools generates it; manual edits are gated by the hard rules.
+    AUTO = "AUTO"
+    #: "Reczne ukladanie": the manager builds it cell by cell, freely, and
+    #: the rules are checked only when the work is sent for checking.
+    MANUAL = "MANUAL"
+
+
 class AuditAction(str, enum.Enum):
     LOGIN = "LOGIN"
     LOGOUT = "LOGOUT"
@@ -57,6 +67,8 @@ class AuditAction(str, enum.Enum):
     SCHEDULE_VALIDATED = "SCHEDULE_VALIDATED"
     SCHEDULE_APPROVED = "SCHEDULE_APPROVED"
     SCHEDULE_RESTORED = "SCHEDULE_RESTORED"
+    SCHEDULE_MODE_CHANGED = "SCHEDULE_MODE_CHANGED"
+    SCHEDULE_MANUAL_EDIT = "SCHEDULE_MANUAL_EDIT"
     ASSIGNMENT_CREATED = "ASSIGNMENT_CREATED"
     ASSIGNMENT_MOVED = "ASSIGNMENT_MOVED"
     ASSIGNMENT_UPDATED = "ASSIGNMENT_UPDATED"
