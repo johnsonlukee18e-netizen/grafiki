@@ -21,6 +21,7 @@ from app.scheduler.statistics import build_statistics
 CHECKS: tuple[tuple[str, str], ...] = (
     (rules.RULE_MIN_STAFF, "Minimalna obsada"),
     (rules.RULE_MIN_NURSES, "Pielegniarki na zmianie"),
+    (rules.RULE_SHIFT_DAY, "Ranek tylko w dni robocze"),
     (rules.RULE_WEEKLY_LIMIT, "Tygodniowy limit godzin"),
     (rules.RULE_MIN_REST, "Minimalny odpoczynek"),
     (rules.RULE_AFTER_NIGHT, "Regula po nocce"),
@@ -90,6 +91,7 @@ def validate(ctx: PlanningContext, assignments: list[PlannedAssignment]) -> Vali
     errors += _check_one_shift_per_day(in_window, name_of)
     errors += _check_minimum_staffing(ctx, in_window)
     errors += _check_minimum_nurses(ctx, in_window)
+    errors += _check_shift_days(ctx, in_window, name_of)
     errors += _check_availability(ctx, in_window, name_of)
     errors += _check_employment(ctx, in_window, name_of)
     errors += _check_weekly_limit(ctx, combined, name_of)
@@ -175,7 +177,7 @@ def _check_minimum_staffing(
         counts[(item.day, item.shift_code)] += 1
     out: list[Violation] = []
     for day in ctx.days:
-        for shift in ctx.shifts:
+        for shift in ctx.shifts_on(day):
             if shift.minimum_staff <= 0:
                 continue
             actual = counts[(day, shift.code)]
@@ -207,7 +209,7 @@ def _check_minimum_nurses(
             counts[(item.day, item.shift_code)] += 1
     out: list[Violation] = []
     for day in ctx.days:
-        for shift in ctx.shifts:
+        for shift in ctx.shifts_on(day):
             if shift.minimum_nurses <= 0:
                 continue
             actual = counts[(day, shift.code)]
@@ -225,6 +227,36 @@ def _check_minimum_nurses(
                         details={"required": shift.minimum_nurses, "actual": actual},
                     )
                 )
+    return out
+
+
+def _check_shift_days(
+    ctx: PlanningContext, assignments: list[PlannedAssignment], name_of
+) -> list[Violation]:
+    """A working-days-only shift (R) may not land on a weekend or holiday."""
+    shifts = ctx.shift_by_code
+    out: list[Violation] = []
+    for item in assignments:
+        shift = shifts.get(item.shift_code)
+        if shift is None or ctx.shift_allowed_on(shift, item.day):
+            continue
+        reason = (
+            f"swieto ({ctx.holidays[item.day]})" if ctx.is_holiday(item.day) else "weekend"
+        )
+        out.append(
+            Violation(
+                code=rules.RULE_SHIFT_DAY,
+                severity="error",
+                message=(
+                    f"{name_of(item.employee_id)}: zmiana {shift.code} ({shift.name}) "
+                    f"{item.day.isoformat()} - to {reason}, a ta zmiana jest tylko "
+                    "w dni robocze."
+                ),
+                employee_id=item.employee_id,
+                day=item.day,
+                shift_code=item.shift_code,
+            )
+        )
     return out
 
 
@@ -501,6 +533,9 @@ def _check_preferences(
             )
             continue
         wanted = PREFERENCE_TO_SHIFT.get(declared)
+        wanted_shift = ctx.shift_by_code.get(wanted) if wanted else None
+        if wanted_shift is not None and not ctx.shift_allowed_on(wanted_shift, day):
+            continue  # e.g. a morning wished for on a Sunday cannot be honoured
         if wanted and code and code != wanted:
             out.append(
                 Violation(

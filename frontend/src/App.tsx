@@ -11,6 +11,7 @@ import EmployeesPage from './pages/EmployeesPage'
 import HistoryPage from './pages/HistoryPage'
 import HolidaysPage from './pages/HolidaysPage'
 import LoginPage from './pages/LoginPage'
+import ManualPage from './pages/ManualPage'
 import SchedulePage from './pages/SchedulePage'
 import SettingsPage from './pages/SettingsPage'
 import UsersPage from './pages/UsersPage'
@@ -25,6 +26,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: 'bi-speedometer2' },
   { to: '/grafik', label: 'Grafik', icon: 'bi-calendar3' },
+  { to: '/reczne', label: 'Reczne ukladanie', icon: 'bi-pencil-square' },
   { to: '/pracownicy', label: 'Pracownicy', icon: 'bi-people' },
   { to: '/dostepnosc', label: 'Dostepnosc', icon: 'bi-calendar-check' },
   { to: '/swieta', label: 'Swieta', icon: 'bi-stars' },
@@ -109,6 +111,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/grafik" element={<SchedulePage />} />
+          <Route path="/reczne" element={<ManualPage />} />
           <Route path="/pracownicy" element={<EmployeesPage />} />
           <Route path="/dostepnosc" element={<AvailabilityPage />} />
           <Route path="/swieta" element={<HolidaysPage />} />

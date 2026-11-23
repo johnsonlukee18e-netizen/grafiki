@@ -35,6 +35,8 @@ class ShiftDef:
     minimum_staff: int
     #: Part of ``minimum_staff`` that has to be covered by nurses.
     minimum_nurses: int = 0
+    #: Only on working days - never on a weekend or public holiday.
+    workdays_only: bool = False
 
     def start_on(self, day: date) -> datetime:
         return datetime.combine(day, self.start_time)
@@ -167,6 +169,16 @@ class PlanningContext:
 
     def is_holiday(self, day: date) -> bool:
         return day in self.holidays
+
+    def is_workday(self, day: date) -> bool:
+        return day.weekday() < 5 and not self.is_holiday(day)
+
+    def shift_allowed_on(self, shift: ShiftDef, day: date) -> bool:
+        """Whether ``shift`` exists at all on ``day`` (R: working days only)."""
+        return not shift.workdays_only or self.is_workday(day)
+
+    def shifts_on(self, day: date) -> list[ShiftDef]:
+        return [s for s in self.shifts if self.shift_allowed_on(s, day)]
 
 
 @dataclass(frozen=True, slots=True)

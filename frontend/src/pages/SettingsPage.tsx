@@ -307,6 +307,9 @@ export default function SettingsPage() {
                       <th title="Ile osob z minimalnej obsady musi miec role pielegniarki">
                         Min. pielegniarek
                       </th>
+                      <th title="Zmiana nie wystepuje w soboty, niedziele i swieta">
+                        Tylko dni robocze
+                      </th>
                       <th>Aktywna</th>
                       <th />
                     </tr>
@@ -355,6 +358,7 @@ function ShiftRow({
     duration_minutes: shift.duration_minutes,
     minimum_staff: shift.minimum_staff,
     minimum_nurses: shift.minimum_nurses,
+    workdays_only: shift.workdays_only,
     active: shift.active,
   })
 
@@ -383,6 +387,7 @@ function ShiftRow({
     draft.duration_minutes !== shift.duration_minutes ||
     draft.minimum_staff !== shift.minimum_staff ||
     draft.minimum_nurses !== shift.minimum_nurses ||
+    draft.workdays_only !== shift.workdays_only ||
     draft.active !== shift.active
 
   return (
@@ -455,6 +460,17 @@ function ShiftRow({
           <input
             className="form-check-input"
             type="checkbox"
+            checked={draft.workdays_only}
+            onChange={(e) => setDraft({ ...draft, workdays_only: e.target.checked })}
+            title="Nie w weekendy i swieta"
+          />
+        </div>
+      </td>
+      <td>
+        <div className="form-check form-switch">
+          <input
+            className="form-check-input"
+            type="checkbox"
             checked={draft.active}
             onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
           />
@@ -473,6 +489,7 @@ function ShiftRow({
                 duration_minutes: draft.duration_minutes,
                 minimum_staff: draft.minimum_staff,
                 minimum_nurses: draft.minimum_nurses,
+                workdays_only: draft.workdays_only,
                 active: draft.active,
               })
             }

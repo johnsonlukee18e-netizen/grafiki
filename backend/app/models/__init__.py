@@ -8,6 +8,7 @@ from app.models.enums import (
     AvailabilityType,
     EmployeeColor,
     EmployeeRole,
+    ScheduleMode,
     ScheduleStatus,
     UserRole,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "EmployeeRole",
     "Holiday",
     "Schedule",
+    "ScheduleMode",
     "ScheduleStatus",
     "ScheduleVersion",
     "Shift",

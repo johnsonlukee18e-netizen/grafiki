@@ -24,9 +24,12 @@ from app.models import (
 )
 from app.schemas import (
     AssignmentOut,
+    CellsResponse,
+    CellsUpdate,
     DayInfo,
     GenerateRequest,
     GenerateResponse,
+    ManualStartRequest,
     RestoreResponse,
     ScheduleDetail,
     ScheduleOut,
@@ -123,6 +126,45 @@ def generate_schedule(
         solver=result.as_dict(),
         validation=validation.as_dict() if validation else None,
     )
+
+
+@router.post("/manual", response_model=ScheduleOut)
+def start_manual_building(
+    payload: ManualStartRequest,
+    db: Session = Depends(get_db_session),
+    user: User = Depends(require_manager),
+) -> Schedule:
+    """RECZNE UKLADANIE: put a month into manual mode (no generation)."""
+    try:
+        schedule = schedule_service.start_manual(db, payload.year, payload.month, user)
+    except ScheduleError as exc:
+        db.rollback()
+        raise _handle(exc) from exc
+    db.commit()
+    db.refresh(schedule)
+    return schedule
+
+
+@router.put("/{schedule_id}/cells", response_model=CellsResponse)
+def set_cells(
+    schedule_id: int,
+    payload: CellsUpdate,
+    db: Session = Depends(get_db_session),
+    user: User = Depends(require_manager),
+) -> CellsResponse:
+    """Set grid cells freely; the rules are checked on "send for checking"."""
+    schedule = _require_schedule(db, schedule_id)
+    cells = [
+        schedule_service.CellChange(c.employee_id, c.date, c.shift_code) for c in payload.cells
+    ]
+    try:
+        changed = schedule_service.set_cells(db, schedule, cells, user)
+    except ScheduleError as exc:
+        db.rollback()
+        raise _handle(exc) from exc
+    db.commit()
+    db.refresh(schedule)
+    return CellsResponse(schedule=ScheduleOut.model_validate(schedule), changed=changed)
 
 
 def _require_schedule(db: Session, schedule_id: int) -> Schedule:

@@ -55,6 +55,7 @@ z bledem twardego ograniczenia **nie moze** zostac zatwierdzony.
 | - | ------ | --------- | -------------- |
 | 1 | Minimalna obsada na kazdej zmianie | 2 osoby na D, R i N | tak (per zmiana) |
 | 1b | Minimalna liczba pielegniarek w obsadzie zmiany | 1 (nowe instalacje), 0 = wylaczone | tak (per zmiana) |
+| 1c | Ranek (R) tylko w dni robocze - nigdy w sobote, niedziele i swieto | wlaczone dla R | tak (per zmiana, "Tylko dni robocze") |
 | 2 | Maksymalny tygodniowy czas pracy | 37:55 (2275 minut) | tak |
 | 3 | Minimalny odpoczynek miedzy zmianami | 11 h (660 minut) | tak |
 | 4 | Po nocce tylko wolne albo kolejna noc | - | - |
@@ -712,6 +713,8 @@ Operacje modyfikujace wymagaja naglowka `X-CSRF-Token` zgodnego z ciasteczkiem
 | POST | `/api/schedules/{id}/validate`, `/approve`, `/unapprove` | MANAGER |
 | GET | `/api/schedules/{id}/history`, `/history/{version}`, `/statistics` | MANAGER |
 | POST | `/api/schedules/{id}/history/{version}/restore` | MANAGER |
+| POST | `/api/schedules/manual` (reczne ukladanie miesiaca) | MANAGER |
+| PUT | `/api/schedules/{id}/cells` (komorki grafiku w trybie recznym) | MANAGER |
 | GET | `/api/schedules/{id}/pdf` | MANAGER |
 | GET | `/api/schedules/{id}/employee/{employee_id}/pdf` | MANAGER |
 | POST/PUT/DELETE | `/api/assignments`, `/api/assignments/{id}` | MANAGER |
@@ -790,6 +793,26 @@ grafiku w `schedule_versions`. Nic nie jest kasowane bezpowrotnie. W panelu
 *Historia grafikow* kazda wersje mozna podejrzec i przywrocic - przywrocenie
 samo jest nowa wersja (biezacy stan trafia najpierw do historii), a wynik jest
 od razu walidowany wedlug aktualnych danych.
+
+**Reczne ukladanie.** Osobny modul (menu *Reczne ukladanie*), w ktorym system
+niczego nie generuje: manager uklada miesiac sam, klikajac w siatke albo
+"pedzlem" (wybrana zmiana wpisuje sie jednym kliknieciem), i moze przeciagac
+zmiany. W trakcie pracy nic nie jest blokowane - zmiany zapisuja sie jako szkic
+(status *Szkic*). Przycisk **Wyslij do sprawdzenia** uruchamia walidator i
+pokazuje liste rzeczy do poprawienia (klikniecie bledu zaznacza go w siatce);
+poprawny grafik mozna zatwierdzic. Prosby pracownikow (preferowana zmiana,
+wolne, niedostepnosc) sa widoczne jako kropka w komorce i jako sugestie:
+pusta komorka pokazuje polprzezroczysta proponowana zmiane, a panel *Sugestie
+z prosb* pozwala je zaakceptowac pojedynczo lub wszystkie naraz - i zmienic
+pozniej. Mozna zaczac od pustego miesiaca albo od wygenerowanego grafiku.
+Pierwsza zmiana po sprawdzeniu zapisuje sprawdzony stan w Historii; kolejne
+zmiany szkicu nie tworza osobnych wersji. Wygenerowanie grafiku (z
+potwierdzeniem) przelacza miesiac z powrotem na tryb automatyczny.
+
+**Ranek tylko w dni robocze.** Zmiana z wlaczonym "Tylko dni robocze" (domyslnie
+R) nie istnieje w soboty, niedziele i swieta: solver jej wtedy nie planuje,
+jej minimalna obsada nie obowiazuje, a reczne wpisanie jej na taki dzien
+walidator zglasza jako blad. Migracja wlacza to dla R w istniejacej bazie.
 
 **Pielegniarki na zmianie.** Opiekunka nie zastapi pielegniarki, dlatego kazda
 zmiana ma oprocz minimalnej obsady takze `minimum_nurses` (Ustawienia ->

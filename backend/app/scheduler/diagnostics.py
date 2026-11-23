@@ -67,7 +67,7 @@ def _daily_availability(ctx: PlanningContext) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     for day in ctx.days:
         available = [e for e in ctx.employees if ctx.can_work(e, day)]
-        needed = sum(s.minimum_staff for s in ctx.shifts)
+        needed = sum(s.minimum_staff for s in ctx.shifts_on(day))
         if len(available) < needed:
             unavailable = [
                 e.full_name
@@ -94,11 +94,11 @@ def _daily_availability(ctx: PlanningContext) -> list[Diagnostic]:
 
 def _daily_nurses(ctx: PlanningContext) -> list[Diagnostic]:
     """A day where fewer nurses are available than the shifts require."""
-    needed = sum(s.minimum_nurses for s in ctx.shifts)
-    if needed <= 0:
+    if not any(s.minimum_nurses > 0 for s in ctx.shifts):
         return []
     out: list[Diagnostic] = []
     for day in ctx.days:
+        needed = sum(s.minimum_nurses for s in ctx.shifts_on(day))
         available = [e for e in ctx.employees if e.is_nurse and ctx.can_work(e, day)]
         if len(available) >= needed:
             continue
@@ -127,10 +127,11 @@ def _weekly_capacity(ctx: PlanningContext, *, nurses_only: bool = False) -> list
         weeks[rules.iso_week_key(day)].append(day)
 
     for week, days in sorted(weeks.items()):
-        demand = len(days) * sum(
+        demand = sum(
             (shift.minimum_nurses if nurses_only else shift.minimum_staff)
             * shift.duration_minutes
-            for shift in ctx.shifts
+            for day in days
+            for shift in ctx.shifts_on(day)
         )
         if demand <= 0:
             continue

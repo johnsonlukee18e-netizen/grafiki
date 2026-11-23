@@ -8,7 +8,7 @@
  */
 import { useMemo, useState } from 'react'
 
-import { WEEKDAYS_PL, formatMinutes } from '../lib'
+import { AVAILABILITY_LABEL, WEEKDAYS_PL, formatMinutes, shiftAllowedOn } from '../lib'
 import type { Assignment, Availability, DayInfo, Employee, Shift } from '../types'
 
 
@@ -28,6 +28,8 @@ interface Props {
   onCellClick: (target: CellTarget) => void
   onMove: (assignment: Assignment, employee: Employee, day: DayInfo) => void
   highlight?: { employeeId: number | null; date: string | null }
+  /** Suggested shift per empty cell (`employeeId|date` -> code), shown faded. */
+  ghosts?: Map<string, string>
 }
 
 const OFF = 'W'
@@ -42,6 +44,7 @@ export default function ScheduleGrid({
   onCellClick,
   onMove,
   highlight,
+  ghosts,
 }: Props) {
   const [dragged, setDragged] = useState<Assignment | null>(null)
   const [over, setOver] = useState<string | null>(null)
@@ -133,7 +136,12 @@ export default function ScheduleGrid({
                   const title = [
                     `${employee.full_name} - ${day.date}`,
                     day.holiday_name ? `Swieto: ${day.holiday_name}` : null,
-                    declared && declared.type !== 'AVAILABLE' ? `Zgloszenie: ${declared.type}` : null,
+                    declared && declared.type !== 'AVAILABLE'
+                      ? `Prosba: ${AVAILABILITY_LABEL[declared.type] ?? declared.type}${
+                          declared.note ? ` (${declared.note})` : ''
+                        }`
+                      : null,
+                    !assignment && ghosts?.get(key) ? `Sugestia: ${ghosts.get(key)}` : null,
                     assignment?.manually_modified ? 'Zmiana edytowana recznie' : null,
                   ]
                     .filter(Boolean)
@@ -184,6 +192,10 @@ export default function ScheduleGrid({
                         >
                           {assignment.shift_code}
                         </span>
+                      ) : ghosts?.get(key) ? (
+                        <span className={`shift-chip shift-${ghosts.get(key)} ghost`}>
+                          {ghosts.get(key)}
+                        </span>
                       ) : (
                         <span className={`shift-chip shift-${OFF}`}>{OFF}</span>
                       )}
@@ -206,6 +218,13 @@ export default function ScheduleGrid({
                 </span>
               </td>
               {days.map((day) => {
+                if (!shiftAllowedOn(shift, day)) {
+                  return (
+                    <td key={day.date} title={`${shift.name}: tylko w dni robocze`}>
+                      -
+                    </td>
+                  )
+                }
                 const key = `${day.date}|${shift.code}`
                 const count = coverage.get(key) ?? 0
                 const nurses = nurseCoverage.get(key) ?? 0

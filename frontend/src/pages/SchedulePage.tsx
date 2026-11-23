@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 
 import { ApiError, downloadFile } from '../api/client'
 import {
@@ -26,7 +26,7 @@ import {
   StatusBadge,
 } from '../components/common'
 import { useToasts } from '../components/Toasts'
-import { formatDate, monthLabel, todayParts } from '../lib'
+import { formatDate, monthLabel, shiftAllowedOn, todayParts } from '../lib'
 import type { Assignment, DayInfo, Employee, SolverResult, Violation } from '../types'
 
 export default function SchedulePage() {
@@ -55,7 +55,14 @@ export default function SchedulePage() {
   const deleteAssignment = useDeleteAssignment()
 
   const schedule = data?.schedule ?? null
-  const editable = Boolean(schedule) && schedule?.status !== 'APPROVED' && schedule?.status !== 'ARCHIVED'
+  const manualMode = schedule?.mode === 'MANUAL'
+  // A hand-built month is edited in RECZNE UKLADANIE, where nothing is gated
+  // while working; here it is shown read-only so the two flows do not mix.
+  const editable =
+    Boolean(schedule) &&
+    !manualMode &&
+    schedule?.status !== 'APPROVED' &&
+    schedule?.status !== 'ARCHIVED'
   const busy =
     generate.isPending ||
     validate.isPending ||
@@ -343,6 +350,19 @@ export default function SchedulePage() {
         </div>
       )}
 
+      {manualMode && schedule?.status !== 'APPROVED' && (
+        <div className="alert alert-info py-2 d-flex justify-content-between align-items-center" role="alert">
+          <span>
+            <i className="bi bi-pencil-square me-2" />
+            Ten grafik jest ukladany recznie - system go nie generuje. Edytuj go w module
+            Reczne ukladanie.
+          </span>
+          <Link className="btn btn-sm btn-primary" to={`/reczne?year=${year}&month=${month}`}>
+            Otworz reczne ukladanie
+          </Link>
+        </div>
+      )}
+
       {schedule?.status === 'APPROVED' && (
         <div className="alert alert-dark py-2" role="alert">
           <i className="bi bi-lock me-2" />
@@ -456,6 +476,13 @@ export default function SchedulePage() {
             Solver ulozy caly miesiac od poczatku i zastapi obecny grafik ({data.assignments.length}{' '}
             zmian).
           </p>
+          {manualMode && (
+            <div className="alert alert-info py-2 small">
+              <i className="bi bi-pencil-square me-1" />
+              Ten miesiac jest ukladany recznie. Wygenerowanie przelaczy go z powrotem na tryb
+              automatyczny.
+            </div>
+          )}
           {data.assignments.some((a) => a.manually_modified) && (
             <div className="alert alert-warning py-2 small">
               <i className="bi bi-exclamation-triangle me-1" />
@@ -506,11 +533,14 @@ export default function SchedulePage() {
                   cell.assignment?.shift_code === shift.code ? 'btn-primary' : 'btn-outline-primary'
                 } text-start`}
                 onClick={() => setShift(shift.code)}
-                disabled={busy}
+                disabled={busy || !shiftAllowedOn(shift, cell.day)}
                 type="button"
               >
                 <strong className="me-2">{shift.code}</strong>
                 {shift.name} ({shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)})
+                {!shiftAllowedOn(shift, cell.day) && (
+                  <span className="small ms-2">- nie w weekend / swieto</span>
+                )}
               </button>
             ))}
           </div>

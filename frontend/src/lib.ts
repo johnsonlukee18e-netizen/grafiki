@@ -82,6 +82,8 @@ export const ACTION_LABEL: Record<string, string> = {
   SCHEDULE_VALIDATED: 'Walidacja grafiku',
   SCHEDULE_APPROVED: 'Zatwierdzenie grafiku',
   SCHEDULE_RESTORED: 'Przywrocenie wersji grafiku',
+  SCHEDULE_MODE_CHANGED: 'Zmiana trybu ukladania grafiku',
+  SCHEDULE_MANUAL_EDIT: 'Reczne ukladanie grafiku',
   ASSIGNMENT_CREATED: 'Dodanie zmiany',
   ASSIGNMENT_MOVED: 'Przeniesienie zmiany',
   ASSIGNMENT_UPDATED: 'Edycja zmiany',
@@ -91,6 +93,14 @@ export const ACTION_LABEL: Record<string, string> = {
   USER_ROLE_CHANGED: 'Zmiana roli',
   USER_ACTIVATION_CHANGED: 'Aktywacja konta',
   HOLIDAYS_IMPORTED: 'Swieta',
+}
+
+/** A working-days-only shift (R) does not exist on weekends and holidays. */
+export function shiftAllowedOn(
+  shift: { workdays_only: boolean },
+  day: { is_weekend: boolean; is_holiday: boolean },
+): boolean {
+  return !shift.workdays_only || (!day.is_weekend && !day.is_holiday)
 }
 
 /** ISO date string for a year/month/day without timezone surprises. */
