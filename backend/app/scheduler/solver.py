@@ -68,8 +68,8 @@ def generate(ctx: PlanningContext) -> GenerationResult:
             success=False,
             status="INFEASIBLE",
             message=(
-                "Nie znaleziono grafiku spelniajacego wszystkie wymagania. "
-                "Ponizsze warunki wykluczaja sie wzajemnie."
+                "Nie znaleziono grafiku spełniającego wszystkie wymagania. "
+                "Poniższe warunki wykluczają się wzajemnie."
             ),
             diagnostics=blocking,
             suggestions=diag.suggestions_for(blocking, ctx),
@@ -98,10 +98,10 @@ def generate(ctx: PlanningContext) -> GenerationResult:
             "Znaleziono optymalny grafik."
             if is_optimal
             else (
-                "Zwrocono najlepszy grafik znaleziony w dostepnym czasie "
+                "Zwrócono najlepszy grafik znaleziony w dostępnym czasie "
                 f"({ctx.config.solver_time_limit_seconds} s). "
-                "Wszystkie twarde ograniczenia sa spelnione, ale rozwiazanie "
-                "moze nie byc optymalne - zwieksz limit czasu, aby poprawic wynik."
+                "Wszystkie twarde ograniczenia są spełnione, ale rozwiązanie "
+                "może nie być optymalne - zwiększ limit czasu, aby poprawić wynik."
             )
         )
         return GenerationResult(
@@ -122,8 +122,8 @@ def generate(ctx: PlanningContext) -> GenerationResult:
             status=status_name,
             wall_time_seconds=solver.WallTime(),
             message=(
-                "Nie znaleziono grafiku spelniajacego wszystkie wymagania. "
-                "Ponizej znajduja sie zidentyfikowane przyczyny."
+                "Nie znaleziono grafiku spełniającego wszystkie wymagania. "
+                "Poniżej znajdują się zidentyfikowane przyczyny."
             ),
             diagnostics=found,
             suggestions=diag.suggestions_for(found, ctx),
@@ -134,13 +134,13 @@ def generate(ctx: PlanningContext) -> GenerationResult:
         status=status_name,
         wall_time_seconds=solver.WallTime(),
         message=(
-            "Solver nie zdazyl znalezc zadnego poprawnego grafiku w limicie czasu "
-            f"({ctx.config.solver_time_limit_seconds} s). Zwieksz limit czasu w USTAWIENIACH."
+            "Solver nie zdążył znaleźć żadnego poprawnego grafiku w limicie czasu "
+            f"({ctx.config.solver_time_limit_seconds} s). Zwiększ limit czasu w USTAWIENIACH."
         ),
         diagnostics=pre,
         suggestions=[
-            "Zwieksz solver_time_limit_seconds w ustawieniach.",
-            "Zmniejsz liczbe twardych ograniczen (np. nadmiarowe niedostepnosci).",
+            "Zwiększ solver_time_limit_seconds w ustawieniach.",
+            "Zmniejsz liczbę twardych ograniczeń (np. nadmiarowe niedostępności).",
         ],
     )
 
@@ -194,14 +194,14 @@ def _infeasibility_core(ctx: PlanningContext) -> list[diag.Diagnostic]:
             continue
         day, code, required, nurses_only = literals[literal]
         unavailable = diag.unavailable_summary(ctx, day)
-        who = "pielegniarek" if nurses_only else "osob"
+        who = "pielęgniarek" if nurses_only else "osób"
         message = (
-            f"{day.isoformat()}: zmiana {code} wymaga {required} {who}, ale nie da sie ich "
-            "obsadzic bez zlamania innych regul (odpoczynek, regula po nocce, limit godzin, "
+            f"{day.isoformat()}: zmiana {code} wymaga {required} {who}, ale nie da się ich "
+            "obsadzić bez złamania innych reguł (odpoczynek, reguła po nocce, limit godzin, "
             "wolne niedziele)."
         )
         if unavailable:
-            message += " Niedostepni tego dnia: " + ", ".join(unavailable) + "."
+            message += " Niedostępni tego dnia: " + ", ".join(unavailable) + "."
         out.append(
             diag.Diagnostic(
                 code="CORE_MIN_NURSES" if nurses_only else "CORE_MIN_STAFF",

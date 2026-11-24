@@ -9,13 +9,15 @@ export default function LoginPage() {
   const error = params.get('error')
 
   return (
-    <div className="container" style={{ maxWidth: 460 }}>
-      <div className="card shadow-sm mt-5">
-        <div className="card-body p-4 text-center">
-          <i className="bi bi-hospital fs-1 text-primary" />
-          <h1 className="h4 mt-2 mb-1">Grafiki pielegniarek</h1>
+    <div className="login-wrap">
+      <div className="card login-card">
+        <div className="card-body p-4 p-md-5 text-center">
+          <span className="brand-mark" aria-hidden="true">
+            <i className="bi bi-calendar2-heart" />
+          </span>
+          <h1 className="page-title mt-3 mb-1">Grafiki pielęgniarek</h1>
           <p className="text-secondary small mb-4">
-            Zaloguj sie kontem Google, aby zarzadzac grafikami oddzialu.
+            Zaloguj się kontem Google, aby zarządzać grafikami oddziału.
           </p>
 
           {error && (
@@ -35,7 +37,7 @@ export default function LoginPage() {
               Logowanie Google nie jest jeszcze skonfigurowane. Ustaw
               <code className="mx-1">GOOGLE_CLIENT_ID</code> i
               <code className="mx-1">GOOGLE_CLIENT_SECRET</code>
-              w pliku <code>.env</code>, a nastepnie zrestartuj backend.
+              w pliku <code>.env</code>, a następnie zrestartuj backend.
             </div>
           )}
 
@@ -43,7 +45,7 @@ export default function LoginPage() {
             <>
               <hr />
               <div className="small text-secondary mb-2">
-                Tryb deweloperski (niedostepny w produkcji)
+                Tryb deweloperski (niedostępny w produkcji)
               </div>
               <button
                 className="btn btn-outline-secondary w-100"

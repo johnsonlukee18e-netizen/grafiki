@@ -1,59 +1,273 @@
-/* Minimal additions on top of Bootstrap 5 - no extra UI framework. */
+/*
+ * Design tokens on top of Bootstrap 5.3 colour modes.
+ *
+ * Quiet, system-native chrome (system font, hairline separators, grouped
+ * surfaces) so the roster itself - the shift chips - carries the colour.
+ * Every colour is a token with a light and a dark value; nothing below the
+ * token block hard-codes a colour.
+ */
 
-:root {
-  --nurse-sidebar-width: 236px;
+/* --- tokens: light -------------------------------------------------------- */
+:root,
+[data-bs-theme='light'] {
+  --app-bg: #f5f5f7;
+  --app-surface: #ffffff;
+  --app-surface-2: #f2f2f5;
+  --app-text: #1d1d1f;          /* 16.8:1 on surface */
+  --app-text-2: #6e6e73;        /* 5.0:1 on surface, 4.6:1 on bg */
+  --app-separator: rgba(0, 0, 0, 0.09);
+  --app-separator-strong: rgba(0, 0, 0, 0.16);
+  --app-accent: #0066cc;        /* 5.6:1 with white text */
+  --app-accent-text: #0066cc;
+  --app-accent-soft: rgba(0, 102, 204, 0.1);
+  --app-sidebar: #ebebef;
+  --app-sidebar-text: #3a3a3c;
+  --app-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+
+  --app-weekend: #f1f2f6;
+  --app-holiday: #fdecee;
+  --app-head: #fafafc;
+
+  /* shifts: D = day, R = morning, N = night, W = off */
+  --shift-d-bg: #dcebff;  --shift-d-fg: #0b3d91;   /* 9.6:1 */
+  --shift-r-bg: #d9f4e4;  --shift-r-fg: #0b5132;   /* 8.4:1 */
+  --shift-n-bg: #e7e1fb;  --shift-n-fg: #3b2380;   /* 10.2:1 */
+  --shift-w-fg: #a1a1a6;
+
+  --signal-danger-bg: #fde7e9;
+  --signal-danger-fg: #a1121f;
+  --signal-request: #e8730c;
+
   --nurse-red: #dc3545;
-  --nurse-yellow: #ffc107;
-  --nurse-green: #198754;
-  --nurse-purple: #6f42c1;
-  --nurse-weekend: #eef1f5;
-  --nurse-holiday: #fde2e4;
+  --nurse-yellow: #f2b200;
+  --nurse-green: #1f9d55;
+  --nurse-purple: #7a4fd0;
+
+  /* Bootstrap mapping */
+  --bs-body-bg: var(--app-bg);
+  --bs-body-color: var(--app-text);
+  --bs-secondary-color: var(--app-text-2);
+  --bs-border-color: var(--app-separator-strong);
+  --bs-border-color-translucent: var(--app-separator);
+  --bs-tertiary-bg: var(--app-surface-2);
+  --bs-primary: var(--app-accent);
+  --bs-primary-rgb: 0, 102, 204;
+  --bs-link-color: var(--app-accent-text);
+  --bs-link-color-rgb: 0, 102, 204;
+  --bs-link-hover-color: #004f9e;
+  --bs-focus-ring-color: rgba(0, 102, 204, 0.35);
+  --bs-border-radius: 0.5rem;
+  --bs-border-radius-lg: 0.75rem;
+  --bs-border-radius-sm: 0.375rem;
+  color-scheme: light;
 }
 
+/* --- tokens: dark (base + elevated surfaces, softened white) -------------- */
+[data-bs-theme='dark'] {
+  --app-bg: #111113;
+  --app-surface: #1c1c1f;
+  --app-surface-2: #26262a;
+  --app-text: #f2f2f5;          /* 15.6:1 on surface */
+  --app-text-2: #a1a1a8;        /* 7.1:1 on surface */
+  --app-separator: rgba(255, 255, 255, 0.08);
+  --app-separator-strong: rgba(255, 255, 255, 0.14);
+  --app-accent: #0a6fdc;        /* 4.9:1 with white text */
+  --app-accent-text: #5eaaff;   /* 7.2:1 on surface */
+  --app-accent-soft: rgba(94, 170, 255, 0.16);
+  --app-sidebar: #18181b;
+  --app-sidebar-text: #d4d4d8;
+  --app-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+
+  --app-weekend: #222227;
+  --app-holiday: #3a2025;
+  --app-head: #202024;
+
+  --shift-d-bg: rgba(10, 132, 255, 0.26);  --shift-d-fg: #a8d0ff;
+  --shift-r-bg: rgba(48, 209, 88, 0.22);   --shift-r-fg: #8fe5a9;
+  --shift-n-bg: rgba(125, 110, 255, 0.3);  --shift-n-fg: #cdc6ff;
+  --shift-w-fg: #5c5c63;
+
+  --signal-danger-bg: rgba(255, 69, 58, 0.2);
+  --signal-danger-fg: #ff8a80;
+  --signal-request: #ff9f0a;
+
+  --nurse-red: #ff453a;
+  --nurse-yellow: #ffd60a;
+  --nurse-green: #30d158;
+  --nurse-purple: #bf5af2;
+
+  --bs-body-bg: var(--app-bg);
+  --bs-body-color: var(--app-text);
+  --bs-secondary-color: var(--app-text-2);
+  --bs-border-color: var(--app-separator-strong);
+  --bs-border-color-translucent: var(--app-separator);
+  --bs-tertiary-bg: var(--app-surface-2);
+  --bs-secondary-bg: var(--app-surface-2);
+  --bs-primary: var(--app-accent);
+  --bs-primary-rgb: 10, 111, 220;
+  --bs-link-color: var(--app-accent-text);
+  --bs-link-color-rgb: 94, 170, 255;
+  --bs-link-hover-color: #8cc2ff;
+  --bs-focus-ring-color: rgba(94, 170, 255, 0.4);
+  color-scheme: dark;
+}
+
+/* --- base ------------------------------------------------------------------ */
 body {
-  background-color: #f6f7f9;
-  font-size: 0.94rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text',
+    'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.9375rem; /* 15px */
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* --- layout -------------------------------------------------------------- */
+h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5 {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.text-secondary {
+  color: var(--app-text-2) !important;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--app-accent-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* --- layout ---------------------------------------------------------------- */
 .app-shell {
   display: flex;
   min-height: 100vh;
 }
 
 .app-sidebar {
-  width: var(--nurse-sidebar-width);
-  flex: 0 0 var(--nurse-sidebar-width);
-  background: #1f2937;
-  color: #d1d5db;
+  width: 248px;
+  flex: 0 0 248px;
+  background: var(--app-sidebar);
+  color: var(--app-sidebar-text);
+  border-right: 1px solid var(--app-separator);
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.25rem 0.5rem 1.25rem;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 1.05rem;
+  background: linear-gradient(160deg, #2f8cff, #0058c7);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.3);
+}
+
+.brand-name {
+  font-weight: 650;
+  line-height: 1.1;
+  color: var(--app-text);
+}
+
+.brand-sub {
+  font-size: 0.75rem;
+  color: var(--app-text-2);
+}
+
+.nav-section {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-text-2);
+  padding: 0.9rem 0.75rem 0.3rem;
 }
 
 .app-sidebar .nav-link {
-  color: #cbd5e1;
-  border-radius: 0.4rem;
-  padding: 0.5rem 0.75rem;
+  color: var(--app-sidebar-text);
+  border-radius: 0.5rem;
+  padding: 0.42rem 0.7rem;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.65rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  min-height: 32px;
+}
+
+.app-sidebar .nav-link i {
+  font-size: 1rem;
+  width: 1.1rem;
+  text-align: center;
+  color: var(--app-accent-text);
 }
 
 .app-sidebar .nav-link:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--app-separator);
+  color: var(--app-text);
 }
 
 .app-sidebar .nav-link.active {
-  background: #0d6efd;
+  background: var(--app-accent);
   color: #fff;
+}
+
+.app-sidebar .nav-link.active i {
+  color: #fff;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--app-separator);
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--app-accent-text);
+  background: var(--app-accent-soft);
+  flex: 0 0 auto;
+}
+
+.theme-switch .btn {
+  font-size: 0.8rem;
+  padding: 0.2rem 0;
 }
 
 .app-main {
   flex: 1 1 auto;
   min-width: 0;
+  padding: 1.5rem 1.75rem 2.5rem;
 }
 
 @media (max-width: 991.98px) {
@@ -65,14 +279,160 @@ body {
     flex: 0 0 auto;
     height: auto;
     position: static;
+    border-right: 0;
+    border-bottom: 1px solid var(--app-separator);
+  }
+  .app-sidebar .nav {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+  }
+  .nav-section {
+    display: none;
+  }
+  .app-main {
+    padding: 1rem;
   }
 }
 
-/* --- employee colour dot -------------------------------------------------- */
+/* --- page header ------------------------------------------------------------ */
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  margin-bottom: 0.15rem;
+}
+
+/* --- surfaces: cards, tables, modals ---------------------------------------- */
+.card {
+  --bs-card-bg: var(--app-surface);
+  --bs-card-border-color: var(--app-separator);
+  --bs-card-cap-bg: transparent;
+  --bs-card-border-radius: 0.75rem;
+  --bs-card-inner-border-radius: calc(0.75rem - 1px);
+  box-shadow: var(--app-shadow);
+}
+
+.card-header {
+  font-weight: 600;
+  border-bottom-color: var(--app-separator);
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.list-group {
+  --bs-list-group-bg: var(--app-surface);
+  --bs-list-group-border-color: var(--app-separator);
+  --bs-list-group-action-hover-bg: var(--app-surface-2);
+  --bs-list-group-active-bg: var(--app-accent);
+  --bs-list-group-active-border-color: var(--app-accent);
+}
+
+.table {
+  --bs-table-bg: var(--app-surface);
+  --bs-table-border-color: var(--app-separator);
+  --bs-table-hover-bg: var(--app-surface-2);
+  --bs-table-striped-bg: var(--app-surface-2);
+}
+
+.table > thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--app-text-2);
+  background: var(--app-head);
+  border-bottom-color: var(--app-separator-strong);
+}
+
+.modal {
+  --bs-modal-bg: var(--app-surface);
+  --bs-modal-border-color: var(--app-separator);
+  --bs-modal-border-radius: 0.9rem;
+  --bs-modal-header-border-color: var(--app-separator);
+  --bs-modal-footer-border-color: var(--app-separator);
+}
+
+.modal-content {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.modal-backdrop.show {
+  opacity: 0.35;
+}
+
+.form-control,
+.form-select {
+  background-color: var(--app-surface);
+  border-color: var(--app-separator-strong);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--app-accent-text);
+  box-shadow: 0 0 0 0.2rem var(--bs-focus-ring-color);
+}
+
+.form-check-input:checked {
+  background-color: var(--app-accent);
+  border-color: var(--app-accent);
+}
+
+/* --- buttons ---------------------------------------------------------------- */
+.btn {
+  font-weight: 500;
+  border-radius: 0.5rem;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--app-accent);
+  --bs-btn-border-color: var(--app-accent);
+  --bs-btn-hover-bg: #0058b0;
+  --bs-btn-hover-border-color: #0058b0;
+  --bs-btn-active-bg: #004f9e;
+  --bs-btn-active-border-color: #004f9e;
+  --bs-btn-disabled-bg: var(--app-accent);
+  --bs-btn-disabled-border-color: var(--app-accent);
+}
+
+[data-bs-theme='dark'] .btn-primary {
+  --bs-btn-hover-bg: #1a7ef0;
+  --bs-btn-hover-border-color: #1a7ef0;
+  --bs-btn-active-bg: #0862c4;
+  --bs-btn-active-border-color: #0862c4;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--app-accent-text);
+  --bs-btn-border-color: var(--app-separator-strong);
+  --bs-btn-hover-bg: var(--app-accent-soft);
+  --bs-btn-hover-color: var(--app-accent-text);
+  --bs-btn-hover-border-color: var(--app-accent-text);
+  --bs-btn-active-bg: var(--app-accent);
+  --bs-btn-active-border-color: var(--app-accent);
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: var(--app-text);
+  --bs-btn-border-color: var(--app-separator-strong);
+  --bs-btn-bg: var(--app-surface);
+  --bs-btn-hover-bg: var(--app-surface-2);
+  --bs-btn-hover-color: var(--app-text);
+  --bs-btn-hover-border-color: var(--app-separator-strong);
+  --bs-btn-active-bg: var(--app-surface-2);
+  --bs-btn-active-color: var(--app-text);
+  --bs-btn-active-border-color: var(--app-separator-strong);
+}
+
+.btn-group > .form-select {
+  border-radius: 0;
+  margin-left: -1px;
+}
+
+/* --- employee colour ---------------------------------------------------------- */
 .color-dot {
   display: inline-block;
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.7rem;
+  height: 0.7rem;
   border-radius: 50%;
   flex: 0 0 auto;
 }
@@ -84,16 +444,20 @@ body {
 .color-bar {
   display: inline-block;
   width: 4px;
-  height: 1.15rem;
+  height: 1.1rem;
   border-radius: 2px;
-  margin-right: 0.45rem;
+  margin-right: 0.5rem;
   vertical-align: -0.2rem;
 }
 
-/* --- schedule grid ------------------------------------------------------- */
+/* --- schedule grid (the signature surface) ------------------------------------ */
 .schedule-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  background: var(--app-surface);
+  border: 1px solid var(--app-separator);
+  border-radius: 0.75rem;
+  box-shadow: var(--app-shadow);
 }
 
 .schedule-table {
@@ -101,11 +465,13 @@ body {
   border-spacing: 0;
   font-size: 0.8rem;
   margin-bottom: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .schedule-table th,
 .schedule-table td {
-  border: 1px solid #dee2e6;
+  border-right: 1px solid var(--app-separator);
+  border-bottom: 1px solid var(--app-separator);
   padding: 0;
   text-align: center;
   vertical-align: middle;
@@ -113,67 +479,105 @@ body {
 }
 
 .schedule-table thead th {
-  background: #212529;
-  color: #fff;
+  background: var(--app-head);
+  color: var(--app-text-2);
   position: sticky;
   top: 0;
   z-index: 3;
   font-weight: 600;
-  padding: 0.25rem 0.35rem;
+  padding: 0.35rem 0.3rem;
+  border-bottom-color: var(--app-separator-strong);
+}
+
+.schedule-table thead th .day-num {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  color: var(--app-text);
+  font-size: 0.85rem;
+}
+
+.schedule-table thead th .day-name {
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* today: the one accent in the header */
+.schedule-table thead th.today .day-num {
+  background: var(--app-accent);
+  color: #fff;
 }
 
 .schedule-table .name-cell {
   position: sticky;
   left: 0;
   z-index: 2;
-  background: #fff;
+  background: var(--app-surface);
   text-align: left;
-  padding: 0.3rem 0.5rem;
-  min-width: 190px;
-  max-width: 190px;
+  padding: 0.3rem 0.65rem;
+  min-width: 196px;
+  max-width: 196px;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 .schedule-table thead .name-cell {
   z-index: 4;
-  background: #212529;
-  color: #fff;
+  background: var(--app-head);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .schedule-table td.day-cell {
-  width: 34px;
-  min-width: 34px;
-  height: 30px;
+  width: 36px;
+  min-width: 36px;
+  height: 34px;
   cursor: pointer;
   position: relative;
 }
 
 .schedule-table td.weekend,
 .schedule-table th.weekend {
-  background-color: var(--nurse-weekend);
+  background-color: var(--app-weekend);
 }
 
 .schedule-table td.holiday,
 .schedule-table th.holiday {
-  background-color: var(--nurse-holiday);
+  background-color: var(--app-holiday);
+}
+
+.schedule-table td.day-cell:hover {
+  box-shadow: inset 0 0 0 2px var(--app-accent-soft);
 }
 
 .schedule-table td.day-cell.drag-over {
-  outline: 2px solid #0d6efd;
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--app-accent-text);
+}
+
+.schedule-table td.day-cell.table-warning {
+  background-color: rgba(255, 193, 7, 0.28);
+  box-shadow: inset 0 0 0 2px #f0ad00;
 }
 
 .schedule-table td.day-cell.dragging .shift-chip {
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 .shift-chip {
   display: block;
-  width: 100%;
-  height: 100%;
-  line-height: 30px;
-  font-weight: 600;
+  margin: 3px;
+  height: calc(100% - 6px);
+  line-height: 28px;
+  border-radius: 6px;
+  font-weight: 650;
+  font-size: 0.78rem;
   cursor: grab;
   user-select: none;
 }
@@ -181,18 +585,18 @@ body {
 .shift-chip.manual::after {
   content: '';
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 4px;
+  right: 4px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #0d6efd;
+  background: var(--app-accent-text);
 }
 
-.shift-D { background: #cfe2ff; color: #084298; }
-.shift-R { background: #d1e7dd; color: #0a3622; }
-.shift-N { background: #e2d9f3; color: #3d1e6d; }
-.shift-W { color: #adb5bd; font-weight: 400; }
+.shift-D { background: var(--shift-d-bg); color: var(--shift-d-fg); }
+.shift-R { background: var(--shift-r-bg); color: var(--shift-r-fg); }
+.shift-N { background: var(--shift-n-bg); color: var(--shift-n-fg); }
+.shift-W { color: var(--shift-w-fg); font-weight: 400; background: transparent; }
 
 .unavailable-cell {
   background-image: repeating-linear-gradient(
@@ -207,92 +611,65 @@ body {
 .preferred-cell::before {
   content: '';
   position: absolute;
-  left: 2px;
-  bottom: 2px;
+  left: 4px;
+  bottom: 4px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #fd7e14;
+  background: var(--signal-request);
+  z-index: 1;
 }
 
 .coverage-row td {
   font-size: 0.7rem;
-  color: #6c757d;
-  background: #f8f9fa;
+  color: var(--app-text-2);
+  background: var(--app-surface-2);
+  height: 30px;
+}
+
+.coverage-row:first-of-type td,
+.schedule-table tbody tr.coverage-row.first td {
+  border-top: 1px solid var(--app-separator-strong);
+}
+
+.coverage-row td.name-cell {
+  background: var(--app-surface-2);
+  font-weight: 500;
 }
 
 .coverage-row td.short {
-  background: #f8d7da;
-  color: #842029;
+  background: var(--signal-danger-bg);
+  color: var(--signal-danger-fg);
   font-weight: 700;
 }
 
-/* nurses among the crew, under the head count */
 .coverage-row .coverage-nurses {
   font-size: 0.6rem;
   line-height: 1;
   opacity: 0.8;
 }
 
-/* --- misc ---------------------------------------------------------------- */
-.check-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid #f1f3f5;
+/* a suggestion from an employee's request (manual building) */
+.shift-chip.ghost {
+  opacity: 0.55;
+  background: transparent;
+  outline: 1.5px dashed currentColor;
+  outline-offset: -1.5px;
 }
 
-.check-row:last-child {
-  border-bottom: none;
+.brush-btn.active {
+  box-shadow: 0 0 0 0.2rem var(--bs-focus-ring-color);
 }
 
-.toast-stack {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 1080;
-  max-width: 520px;
-}
-
-.availability-calendar .fc {
-  font-size: 0.85rem;
-}
-
-.availability-calendar .fc-daygrid-day.selected-day {
-  background: #cfe2ff;
-}
-
-.availability-calendar .fc-daygrid-day-frame {
-  cursor: pointer;
-}
-
+/* --- legend -------------------------------------------------------------------- */
 .legend-swatch {
   display: inline-block;
   width: 1.4rem;
   height: 1.1rem;
-  border-radius: 3px;
-  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  border: 1px solid var(--app-separator-strong);
   vertical-align: -0.2rem;
   margin-right: 0.3rem;
-}
-
-.table-sticky-head thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-/* a suggestion from an employee's request (manual building) */
-.shift-chip.ghost {
-  opacity: 0.45;
-  outline: 1px dashed currentColor;
-  outline-offset: -2px;
-}
-
-.brush-btn.active {
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.35);
 }
 
 .legend-swatch.preferred-dot {
@@ -307,10 +684,162 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fd7e14;
+  background: var(--signal-request);
+}
+
+/* --- misc ---------------------------------------------------------------------- */
+.check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--app-separator);
+}
+
+.check-row:last-child {
+  border-bottom: none;
+}
+
+.toast-stack {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1080;
+  max-width: 520px;
+}
+
+.toast {
+  --bs-toast-bg: var(--app-surface);
+  --bs-toast-border-color: var(--app-separator);
+  --bs-toast-border-radius: 0.75rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 }
 
 .suggestion-list {
   max-height: 420px;
   overflow-y: auto;
+}
+
+.table-sticky-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.stat-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.stat-tile .stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  background: var(--app-accent-soft);
+  color: var(--app-accent-text);
+  flex: 0 0 auto;
+}
+
+/* dashboard numbers */
+.metric {
+  background: var(--app-surface-2);
+  border-radius: 0.6rem;
+  padding: 0.7rem 0.5rem;
+}
+
+.metric-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- login ---------------------------------------------------------------------- */
+.login-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-card .brand-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  font-size: 1.6rem;
+  margin: 0 auto;
+}
+
+/* --- FullCalendar (availability) ------------------------------------------------- */
+.availability-calendar .fc {
+  font-size: 0.85rem;
+  --fc-border-color: var(--app-separator-strong);
+  --fc-page-bg-color: var(--app-surface);
+  --fc-neutral-bg-color: var(--app-surface-2);
+  --fc-today-bg-color: var(--app-accent-soft);
+  --fc-button-bg-color: var(--app-surface);
+  --fc-button-border-color: var(--app-separator-strong);
+  --fc-button-text-color: var(--app-text);
+  --fc-button-hover-bg-color: var(--app-surface-2);
+  --fc-button-hover-border-color: var(--app-separator-strong);
+  --fc-button-active-bg-color: var(--app-accent);
+  --fc-button-active-border-color: var(--app-accent);
+}
+
+.availability-calendar .fc .fc-button {
+  border-radius: 0.5rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.availability-calendar .fc .fc-toolbar-title {
+  font-size: 1.15rem;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+
+.availability-calendar .fc-daygrid-day.selected-day {
+  background: var(--app-accent-soft);
+}
+
+.availability-calendar .fc-daygrid-day-frame {
+  cursor: pointer;
+}
+
+.availability-calendar .fc-col-header-cell {
+  background: var(--app-head);
+}
+
+.availability-calendar .fc-bg-event {
+  background: var(--app-holiday) !important;
+  opacity: 1;
+}
+
+.availability-calendar .fc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.availability-calendar .fc .fc-col-header-cell-cushion {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--app-text-2);
+}
+
+.availability-calendar .fc .fc-day-other .fc-daygrid-day-number {
+  color: var(--app-text-2);
+  opacity: 0.6;
 }

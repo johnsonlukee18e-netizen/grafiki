@@ -31,10 +31,14 @@ def ensure_holidays_for_year(db: Session, year: int, country: str = "PL") -> int
     """
     if country != "PL":
         return 0
-    existing = {h.day for h in holidays_for_year(db, year, country)}
+    existing = {h.day: h for h in holidays_for_year(db, year, country)}
     added = 0
     for holiday in polish_holidays(year):
-        if holiday.day in existing:
+        current = existing.get(holiday.day)
+        if current is not None:
+            # Statutory names were once stored without Polish letters.
+            if not current.is_custom and current.name != holiday.name:
+                current.name = holiday.name
             continue
         db.add(Holiday(day=holiday.day, name=holiday.name, country=country, is_custom=False))
         added += 1

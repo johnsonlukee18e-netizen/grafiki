@@ -25,8 +25,8 @@ export default function AuditPage() {
   return (
     <>
       <PageHeader
-        title="Dziennik zdarzen"
-        subtitle="Kazda istotna operacja jest rejestrowana wraz z uzytkownikiem i czasem."
+        title="Dziennik zdarzeń"
+        subtitle="Każda istotna operacja jest rejestrowana wraz z użytkownikiem i czasem."
         actions={
           <>
             <input
@@ -44,7 +44,7 @@ export default function AuditPage() {
             >
               {[50, 150, 300, 500].map((value) => (
                 <option key={value} value={value}>
-                  {value} wpisow
+                  {value} wpisów
                 </option>
               ))}
             </select>
@@ -55,13 +55,13 @@ export default function AuditPage() {
       <div className="card shadow-sm">
         <div className="table-responsive" style={{ maxHeight: '70vh' }}>
           <table className="table table-sm table-hover align-middle mb-0 table-sticky-head">
-            <thead className="table-light">
+            <thead className="">
               <tr>
                 <th style={{ minWidth: 150 }}>Czas</th>
-                <th>Uzytkownik</th>
+                <th>Użytkownik</th>
                 <th>Akcja</th>
                 <th>Obiekt</th>
-                <th>Szczegoly</th>
+                <th>Szczegóły</th>
               </tr>
             </thead>
             <tbody>
@@ -84,7 +84,7 @@ export default function AuditPage() {
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={5} className="text-center text-secondary py-4">
-                    Brak wpisow.
+                    Brak wpisów.
                   </td>
                 </tr>
               )}

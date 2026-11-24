@@ -21,8 +21,8 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Dashboard"
-        subtitle={`${data.facility_name} - ${data.department_name}`}
+        title="Pulpit"
+        subtitle={`${data.facility_name} · ${data.department_name}`}
         actions={
           <MonthPicker
             year={year}
@@ -61,12 +61,12 @@ export default function DashboardPage() {
                   <div className="row text-center mt-3 g-2">
                     <Metric label="Zmiany" value={current.assignments} />
                     <Metric
-                      label="Bledy"
+                      label="Błędy"
                       value={current.errors}
                       variant={current.errors ? 'danger' : 'success'}
                     />
                     <Metric
-                      label="Ostrzezenia"
+                      label="Ostrzeżenia"
                       value={current.warnings}
                       variant={current.warnings ? 'warning' : 'success'}
                     />
@@ -81,8 +81,8 @@ export default function DashboardPage() {
                 </>
               ) : (
                 <p className="text-secondary mt-3 mb-0">
-                  Ten miesiac nie ma jeszcze grafiku. Uzyj przycisku
-                  <strong> Generuj grafik</strong>, aby go ulozyc.
+                  Ten miesiąc nie ma jeszcze grafiku. Użyj przycisku
+                  <strong> Generuj grafik</strong>, aby go ułożyć.
                 </p>
               )}
             </div>
@@ -105,14 +105,14 @@ export default function DashboardPage() {
                             row.status === 'OK' ? 'success' : 'danger'
                           }`}
                         >
-                          {row.status === 'OK' ? 'OK' : `${row.count} bl.`}
+                          {row.status === 'OK' ? 'OK' : `${row.count} bł.`}
                         </span>
                       </div>
                     ))}
                 </div>
               ) : (
                 <p className="text-secondary small mb-0">
-                  Brak wynikow walidacji - wygeneruj lub zwaliduj grafik.
+                  Brak wyników walidacji - wygeneruj lub zwaliduj grafik.
                 </p>
               )}
             </div>
@@ -122,7 +122,7 @@ export default function DashboardPage() {
 
       <div className="d-flex flex-wrap gap-2 mb-4">
         <button className="btn btn-primary" onClick={() => navigate('/grafik')} type="button">
-          <i className="bi bi-calendar3 me-1" /> Otworz grafik
+          <i className="bi bi-calendar3 me-1" /> Otwórz grafik
         </button>
         <button
           className="btn btn-outline-primary"
@@ -143,17 +143,17 @@ export default function DashboardPage() {
           onClick={() => navigate('/dostepnosc')}
           type="button"
         >
-          <i className="bi bi-calendar-check me-1" /> Dostepnosc
+          <i className="bi bi-calendar-check me-1" /> Dostępność
         </button>
       </div>
 
       <div className="row g-3">
         <div className="col-12 col-lg-6">
           <div className="card shadow-sm h-100">
-            <div className="card-header bg-white fw-semibold">Ostatnie grafiki</div>
+            <div className="card-header fw-semibold">Ostatnie grafiki</div>
             <ul className="list-group list-group-flush">
               {data.recent_schedules.length === 0 && (
-                <li className="list-group-item text-secondary small">Brak grafikow.</li>
+                <li className="list-group-item text-secondary small">Brak grafików.</li>
               )}
               {data.recent_schedules.map((schedule) => (
                 <li
@@ -182,7 +182,7 @@ export default function DashboardPage() {
 
         <div className="col-12 col-lg-6">
           <div className="card shadow-sm h-100">
-            <div className="card-header bg-white fw-semibold">Zmiany na oddziale</div>
+            <div className="card-header fw-semibold">Zmiany na oddziale</div>
             <div className="table-responsive">
               <table className="table table-sm mb-0">
                 <thead>
@@ -227,8 +227,8 @@ function Metric({
 }) {
   return (
     <div className="col-6 col-md-3">
-      <div className="border rounded p-2 h-100">
-        <div className={`h4 mb-0 text-${variant}`}>{value}</div>
+      <div className="metric h-100">
+        <div className={`metric-value text-${variant}`}>{value}</div>
         <div className="small text-secondary">{label}</div>
       </div>
     </div>

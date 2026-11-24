@@ -14,9 +14,9 @@ export function PageHeader({
   actions?: ReactNode
 }) {
   return (
-    <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div className="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
       <div>
-        <h1 className="h4 mb-1">{title}</h1>
+        <h1 className="page-title">{title}</h1>
         {subtitle && <div className="text-secondary small">{subtitle}</div>}
       </div>
       {actions && <div className="d-flex flex-wrap gap-2">{actions}</div>}
@@ -52,7 +52,7 @@ export function Loading({ label = 'Wczytywanie...' }: { label?: string }) {
 }
 
 export function ErrorBox({ error }: { error: unknown }) {
-  const message = error instanceof Error ? error.message : 'Wystapil nieoczekiwany blad.'
+  const message = error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd.'
   return (
     <div className="alert alert-danger" role="alert">
       <i className="bi bi-exclamation-triangle me-2" />
@@ -87,16 +87,21 @@ export function MonthPicker({
   const years = Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 2 + i)
 
   return (
-    <div className="btn-group" role="group" aria-label="Wybor miesiaca">
-      <button className="btn btn-outline-secondary" onClick={() => shift(-1)} type="button">
+    <div className="btn-group" role="group" aria-label="Wybór miesiąca">
+      <button
+        className="btn btn-outline-secondary"
+        onClick={() => shift(-1)}
+        type="button"
+        aria-label="Poprzedni miesiąc"
+      >
         <i className="bi bi-chevron-left" />
       </button>
       <select
         className="form-select"
-        style={{ maxWidth: 150 }}
+        style={{ minWidth: 150, maxWidth: 180 }}
         value={month}
         onChange={(e) => onChange(year, Number(e.target.value))}
-        aria-label="Miesiac"
+        aria-label="Miesiąc"
       >
         {MONTHS_PL.map((name, index) => (
           <option key={name} value={index + 1}>
@@ -117,7 +122,12 @@ export function MonthPicker({
           </option>
         ))}
       </select>
-      <button className="btn btn-outline-secondary" onClick={() => shift(1)} type="button">
+      <button
+        className="btn btn-outline-secondary"
+        onClick={() => shift(1)}
+        type="button"
+        aria-label="Następny miesiąc"
+      >
         <i className="bi bi-chevron-right" />
       </button>
     </div>

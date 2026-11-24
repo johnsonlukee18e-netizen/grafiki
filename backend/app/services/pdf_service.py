@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import unicodedata
 from datetime import datetime
 from io import BytesIO
 from xml.sax.saxutils import escape
@@ -98,6 +99,14 @@ MONTHS_PL = (
     ("grudzień", "grudzien"),
 )
 WEEKDAYS_PL = ("Pn", "Wt", "Śr" if UNICODE_FONT else "Sr", "Cz", "Pt", "So", "Nd")
+
+
+def pl(text: str) -> str:
+    """Fixed Polish labels: kept as is with a Unicode font, plain ASCII otherwise."""
+    if UNICODE_FONT:
+        return text
+    text = text.replace("ł", "l").replace("Ł", "L")
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
 
 
 def esc(value: object) -> str:
@@ -272,7 +281,7 @@ def _statistics_table(statistics, styles) -> Table:
         "Soboty",
         "Niedziele",
         "Weekendy",
-        "Swieta",
+        pl("Święta"),
         "Wolne",
     ]
     data = [head]
@@ -338,7 +347,7 @@ def render_schedule_pdf(db: Session, schedule: Schedule) -> bytes:
     story.append(Spacer(1, 4 * mm))
     story.append(_legend(styles, ctx))
     story.append(PageBreak())
-    story.append(Paragraph("Statystyki miesieczne", styles["section"]))
+    story.append(Paragraph(pl("Statystyki miesięczne"), styles["section"]))
     story.append(_statistics_table(statistics, styles))
     story.append(Spacer(1, 4 * mm))
     story.append(
@@ -388,7 +397,7 @@ def render_employee_pdf(db: Session, schedule: Schedule, employee: Employee) -> 
 
     by_day = {a.day: a.shift_code for a in assignments}
     shifts = ctx.shift_by_code
-    data = [["Dzien", "Dzien tyg.", "Zmiana", "Od", "Do", "Czas", "Uwagi"]]
+    data = [[pl("Dzień"), pl("Dzień tyg."), "Zmiana", "Od", "Do", "Czas", "Uwagi"]]
     for day in ctx.days:
         code = by_day.get(day)
         shift = shifts.get(code) if code else None
@@ -441,7 +450,7 @@ def render_employee_pdf(db: Session, schedule: Schedule, employee: Employee) -> 
             f"&nbsp;|&nbsp; N: {own['shifts'].get('N', 0)} "
             f"&nbsp;|&nbsp; soboty: {own['saturdays']} "
             f"&nbsp;|&nbsp; niedziele: {own['sundays']} "
-            f"&nbsp;|&nbsp; swieta: {own['holiday_shifts']} "
+            f"&nbsp;|&nbsp; {pl('święta')}: {own['holiday_shifts']} "
             f"&nbsp;|&nbsp; dni wolne: {own['days_off']}"
         )
         story.append(KeepTogether(Paragraph(summary, styles["small"])))

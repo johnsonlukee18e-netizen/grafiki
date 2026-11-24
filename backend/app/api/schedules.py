@@ -134,7 +134,7 @@ def start_manual_building(
     db: Session = Depends(get_db_session),
     user: User = Depends(require_manager),
 ) -> Schedule:
-    """RECZNE UKLADANIE: put a month into manual mode (no generation)."""
+    """RĘCZNE UKŁADANIE: put a month into manual mode (no generation)."""
     try:
         schedule = schedule_service.start_manual(db, payload.year, payload.month, user)
     except ScheduleError as exc:

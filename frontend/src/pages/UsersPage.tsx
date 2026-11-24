@@ -19,8 +19,8 @@ export default function UsersPage() {
   return (
     <>
       <PageHeader
-        title="Uzytkownicy"
-        subtitle="Konta powstaja automatycznie przy pierwszym logowaniu przez Google, ale bez dostepu - to Ty go przyznajesz przelacznikiem Aktywne. Hasla nie sa przechowywane."
+        title="Użytkownicy"
+        subtitle="Konta powstają automatycznie przy pierwszym logowaniu przez Google, ale bez dostępu - to Ty go przyznajesz przełącznikiem Aktywne. Hasła nie są przechowywane."
       />
 
       {pending.length > 0 && (
@@ -30,12 +30,12 @@ export default function UsersPage() {
             <strong>
               {pending.length === 1
                 ? 'Jedno konto czeka na zatwierdzenie'
-                : `Konta czekajace na zatwierdzenie: ${pending.length}`}
+                : `Konta czekające na zatwierdzenie: ${pending.length}`}
             </strong>
             <div className="small">
               {pending.map((u) => u.email).join(', ')} - dopoki przelacznik
-              <em> Aktywne</em> jest wylaczony, te osoby nie widza zadnych danych.
-              Wlacz go tylko dla osob, ktore rzeczywiscie maja pracowac z grafikiem.
+              <em> Aktywne</em> jest wyłączony, te osoby nie widzą żadnych danych.
+              Włącz go tylko dla osób, które rzeczywiście mają pracować z grafikiem.
             </div>
           </div>
         </div>
@@ -44,7 +44,7 @@ export default function UsersPage() {
       <div className="card shadow-sm">
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
+            <thead className="">
               <tr>
                 <th>E-mail</th>
                 <th>Nazwa</th>
@@ -62,7 +62,7 @@ export default function UsersPage() {
                       <span className="badge text-bg-primary ms-2">to Ty</span>
                     )}
                     {!user.is_active && (
-                      <span className="badge text-bg-warning ms-2">brak dostepu</span>
+                      <span className="badge text-bg-warning ms-2">brak dostępu</span>
                     )}
                   </td>
                   <td>{user.name ?? '-'}</td>
@@ -77,7 +77,7 @@ export default function UsersPage() {
                           { id: user.id, role: e.target.value },
                           {
                             onSuccess: () => toasts.success('Rola zmieniona'),
-                            onError: (err) => toasts.error('Blad', (err as Error).message),
+                            onError: (err) => toasts.error('Błąd', (err as Error).message),
                           },
                         )
                       }
@@ -98,7 +98,7 @@ export default function UsersPage() {
                             { id: user.id, is_active: e.target.checked },
                             {
                               onSuccess: () => toasts.success('Zapisano'),
-                              onError: (err) => toasts.error('Blad', (err as Error).message),
+                              onError: (err) => toasts.error('Błąd', (err as Error).message),
                             },
                           )
                         }

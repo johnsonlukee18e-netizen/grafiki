@@ -20,13 +20,13 @@ from app.scheduler.statistics import build_statistics
 #: Order of the checklist shown in the validation panel.
 CHECKS: tuple[tuple[str, str], ...] = (
     (rules.RULE_MIN_STAFF, "Minimalna obsada"),
-    (rules.RULE_MIN_NURSES, "Pielegniarki na zmianie"),
+    (rules.RULE_MIN_NURSES, "Pielęgniarki na zmianie"),
     (rules.RULE_SHIFT_DAY, "Ranek tylko w dni robocze"),
     (rules.RULE_WEEKLY_LIMIT, "Tygodniowy limit godzin"),
     (rules.RULE_MIN_REST, "Minimalny odpoczynek"),
-    (rules.RULE_AFTER_NIGHT, "Regula po nocce"),
+    (rules.RULE_AFTER_NIGHT, "Reguła po nocce"),
     (rules.RULE_SUNDAY_OFF, "Wolna niedziela w cyklu"),
-    (rules.RULE_UNAVAILABLE, "Dostepnosc pracownikow"),
+    (rules.RULE_UNAVAILABLE, "Dostępność pracowników"),
     (rules.RULE_ONE_SHIFT_PER_DAY, "Jedna zmiana dziennie"),
     (rules.RULE_NOT_EMPLOYED, "Data zatrudnienia"),
 )
@@ -40,11 +40,11 @@ WARN_PREFERENCE = "PREFERENCE_IGNORED"
 WARN_PREFERRED_OFF = "PREFERRED_OFF_IGNORED"
 
 SOFT_CHECKS: tuple[tuple[str, str], ...] = (
-    (WARN_NIGHT_FAIRNESS, "Rowny podzial nocy"),
-    (WARN_WEEKEND_FAIRNESS, "Rowny podzial weekendow"),
-    (WARN_HOLIDAY_FAIRNESS, "Rowny podzial swiat"),
-    (WARN_HOURS_FAIRNESS, "Rowny podzial godzin"),
-    (WARN_PREFERENCE, "Preferencje pracownikow"),
+    (WARN_NIGHT_FAIRNESS, "Równy podział nocy"),
+    (WARN_WEEKEND_FAIRNESS, "Równy podział weekendów"),
+    (WARN_HOLIDAY_FAIRNESS, "Równy podział świąt"),
+    (WARN_HOURS_FAIRNESS, "Równy podział godzin"),
+    (WARN_PREFERENCE, "Preferencje pracowników"),
     (WARN_PREFERRED_OFF, "Preferowane dni wolne"),
 )
 
@@ -136,7 +136,7 @@ def _check_unknown_references(
                     code="UNKNOWN_EMPLOYEE",
                     severity="error",
                     message=(
-                        f"Grafik zawiera przypisanie nieaktywnego lub nieistniejacego "
+                        f"Grafik zawiera przypisanie nieaktywnego lub nieistniejącego "
                         f"pracownika (id {item.employee_id}) w dniu {item.day.isoformat()}."
                     ),
                     employee_id=item.employee_id,
@@ -219,8 +219,8 @@ def _check_minimum_nurses(
                         code=rules.RULE_MIN_NURSES,
                         severity="error",
                         message=(
-                            f"{day.isoformat()}: na zmianie {shift.code} sa {actual} "
-                            f"pielegniarki przy wymaganym minimum {shift.minimum_nurses}."
+                            f"{day.isoformat()}: na zmianie {shift.code} są {actual} "
+                            f"pielęgniarki przy wymaganym minimum {shift.minimum_nurses}."
                         ),
                         day=day,
                         shift_code=shift.code,
@@ -241,7 +241,7 @@ def _check_shift_days(
         if shift is None or ctx.shift_allowed_on(shift, item.day):
             continue
         reason = (
-            f"swieto ({ctx.holidays[item.day]})" if ctx.is_holiday(item.day) else "weekend"
+            f"święto ({ctx.holidays[item.day]})" if ctx.is_holiday(item.day) else "weekend"
         )
         out.append(
             Violation(
@@ -271,8 +271,8 @@ def _check_availability(
                     code=rules.RULE_UNAVAILABLE,
                     severity="error",
                     message=(
-                        f"{name_of(item.employee_id)} zglosil(a) niedostepnosc "
-                        f"{item.day.isoformat()}, a ma przypisana zmiane {item.shift_code}."
+                        f"{name_of(item.employee_id)} zgłosił(a) niedostępność "
+                        f"{item.day.isoformat()}, a ma przypisaną zmianę {item.shift_code}."
                     ),
                     employee_id=item.employee_id,
                     day=item.day,
@@ -314,7 +314,7 @@ def _check_employment(
                     code=rules.RULE_INACTIVE,
                     severity="error",
                     message=(
-                        f"{name_of(item.employee_id)} jest nieaktywny(a), a ma zmiane "
+                        f"{name_of(item.employee_id)} jest nieaktywny(a), a ma zmianę "
                         f"{item.shift_code} w dniu {item.day.isoformat()}."
                     ),
                     employee_id=item.employee_id,
@@ -383,15 +383,15 @@ def _check_sequences(
             if broken == rules.RULE_AFTER_NIGHT:
                 message = (
                     f"{name_of(employee_id)}: po nocce {previous.day.isoformat()} "
-                    f"({first.code}) nastepnego dnia moze byc tylko wolne lub noc, "
+                    f"({first.code}) następnego dnia może być tylko wolne lub noc, "
                     f"a zaplanowano {second.code} ({following.day.isoformat()})."
                 )
             else:
                 message = (
                     f"{name_of(employee_id)}: zmiana {previous.day.isoformat()} "
-                    f"({first.code}) konczy sie o "
+                    f"({first.code}) kończy się o "
                     f"{first.end_on(previous.day).strftime('%d.%m %H:%M')}, a kolejna "
-                    f"({second.code}) zaczyna sie o "
+                    f"({second.code}) zaczyna się o "
                     f"{second.start_on(following.day).strftime('%d.%m %H:%M')}. "
                     f"Odpoczynek: {rules.format_minutes_pl(gap)}. "
                     f"Wymagane minimum: {rules.format_minutes_pl(ctx.config.min_rest_minutes)}."
@@ -472,8 +472,8 @@ def _check_fairness(statistics: dict[str, Any]) -> list[Violation]:
     totals = statistics.get("fairness", {})
     checks = (
         ("nights", WARN_NIGHT_FAIRNESS, "nocnych zmian", FAIRNESS_TOLERANCE_SHIFTS),
-        ("weekend_shifts", WARN_WEEKEND_FAIRNESS, "dyzurow weekendowych", FAIRNESS_TOLERANCE_SHIFTS),
-        ("holiday_shifts", WARN_HOLIDAY_FAIRNESS, "dyzurow swiatecznych", FAIRNESS_TOLERANCE_SHIFTS),
+        ("weekend_shifts", WARN_WEEKEND_FAIRNESS, "dyżurów weekendowych", FAIRNESS_TOLERANCE_SHIFTS),
+        ("holiday_shifts", WARN_HOLIDAY_FAIRNESS, "dyżurów świątecznych", FAIRNESS_TOLERANCE_SHIFTS),
     )
     for key, code, label, tolerance in checks:
         spread = totals.get(key, {}).get("spread")
@@ -484,7 +484,7 @@ def _check_fairness(statistics: dict[str, Any]) -> list[Violation]:
                 code=code,
                 severity="warning",
                 message=(
-                    f"Nierowny podzial {label}: roznica miedzy pracownikami wynosi {spread}."
+                    f"Nierówny podział {label}: różnica między pracownikami wynosi {spread}."
                 ),
                 details=totals.get(key, {}),
             )
@@ -497,7 +497,7 @@ def _check_fairness(statistics: dict[str, Any]) -> list[Violation]:
                 code=WARN_HOURS_FAIRNESS,
                 severity="warning",
                 message=(
-                    "Nierowny podzial godzin: roznica miedzy pracownikami wynosi "
+                    "Nierówny podział godzin: różnica między pracownikami wynosi "
                     f"{rules.format_minutes_pl(spread)}."
                 ),
                 details=minutes,
@@ -523,8 +523,8 @@ def _check_preferences(
                     code=WARN_PREFERRED_OFF,
                     severity="warning",
                     message=(
-                        f"{name_of(employee_id)} prosil(a) o wolne {day.isoformat()}, "
-                        f"a otrzymal(a) zmiane {code}."
+                        f"{name_of(employee_id)} prosił(a) o wolne {day.isoformat()}, "
+                        f"a otrzymał(a) zmianę {code}."
                     ),
                     employee_id=employee_id,
                     day=day,
@@ -542,8 +542,8 @@ def _check_preferences(
                     code=WARN_PREFERENCE,
                     severity="warning",
                     message=(
-                        f"{name_of(employee_id)} preferuje zmiane {wanted} "
-                        f"{day.isoformat()}, a otrzymal(a) {code}."
+                        f"{name_of(employee_id)} preferuje zmianę {wanted} "
+                        f"{day.isoformat()}, a otrzymał(a) {code}."
                     ),
                     employee_id=employee_id,
                     day=day,

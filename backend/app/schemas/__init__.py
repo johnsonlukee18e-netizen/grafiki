@@ -43,7 +43,7 @@ class PartialUpdate(BaseModel):
                 if value is None and key in cls.model_fields and key not in cls.nullable_fields
             ]
             if nulls:
-                raise ValueError(f"Pole nie moze byc puste: {', '.join(sorted(nulls))}")
+                raise ValueError(f"Pole nie może być puste: {', '.join(sorted(nulls))}")
         return data
 
 
@@ -52,7 +52,7 @@ def _strip_required(value: str | None) -> str | None:
         return value
     cleaned = value.strip()
     if not cleaned:
-        raise ValueError("Pole nie moze byc puste")
+        raise ValueError("Pole nie może być puste")
     return cleaned
 
 
@@ -94,7 +94,7 @@ class EmployeeBase(BaseModel):
     def _strip(cls, value: str) -> str:
         cleaned = value.strip()
         if not cleaned:
-            raise ValueError("Pole nie moze byc puste")
+            raise ValueError("Pole nie może być puste")
         return cleaned
 
 
@@ -168,7 +168,7 @@ class ShiftUpdate(PartialUpdate):
             and self.minimum_nurses > self.minimum_staff
         ):
             raise ValueError(
-                "Minimalna liczba pielegniarek nie moze byc wieksza niz minimalna obsada zmiany."
+                "Minimalna liczba pielęgniarek nie może być większa niż minimalna obsada zmiany."
             )
         return self
 

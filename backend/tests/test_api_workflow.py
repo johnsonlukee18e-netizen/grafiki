@@ -95,7 +95,7 @@ def test_month_grid_returns_days_employees_and_assignments(generated):
 def test_employee_colours_are_derived_from_seniority(logged_in):
     employees = {e["full_name"]: e for e in logged_in.get("/api/employees").json()}
     assert employees["Anna Kowalska"]["color"] == "RED"  # employed 2015
-    assert employees["Joanna Wozniak"]["color"] == "PURPLE"  # care worker
+    assert employees["Joanna Woźniak"]["color"] == "PURPLE"  # care worker
     assert employees["Anna Kowalska"]["seniority_label"]
 
 
@@ -205,7 +205,7 @@ def test_cannot_edit_a_day_outside_the_month(generated):
         "shift_code": "D",
     })
     assert response.status_code == 400
-    assert "spoza miesiaca" in response.json()["detail"]["message"]
+    assert "spoza miesiąca" in response.json()["detail"]["message"]
 
 
 def test_double_booking_one_employee_on_one_day_is_refused(generated):
@@ -220,7 +220,7 @@ def test_double_booking_one_employee_on_one_day_is_refused(generated):
         "shift_code": other,
     })
     assert response.status_code == 409
-    assert "juz zmiane" in response.json()["detail"]["message"]
+    assert "już zmianę" in response.json()["detail"]["message"]
 
 
 # --- approval -------------------------------------------------------------
@@ -270,7 +270,7 @@ def test_invalid_schedule_cannot_be_approved(logged_in, db_session):
 
     response = logged_in.post(f"/api/schedules/{schedule_id}/approve")
     assert response.status_code == 409
-    assert "Nie mozna zatwierdzic" in response.json()["detail"]["message"]
+    assert "Nie można zatwierdzić" in response.json()["detail"]["message"]
 
 
 # --- history --------------------------------------------------------------

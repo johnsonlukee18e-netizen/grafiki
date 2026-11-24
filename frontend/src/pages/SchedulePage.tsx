@@ -42,6 +42,9 @@ export default function SchedulePage() {
     date: null,
   })
 
+  // A solver report belongs to the month it was generated for.
+  useEffect(() => setSolverReport(null), [year, month])
+
   const toasts = useToasts()
   const { data, isLoading, error } = useSchedule(year, month)
   const { data: availability } = useAvailability(null, year, month)
@@ -86,13 +89,13 @@ export default function SchedulePage() {
     if (err instanceof ApiError) {
       const violations = err.violations
       toasts.error(
-        'Nie mozna wykonac operacji',
+        'Nie można wykonać operacji',
         err.message,
         violations.map((v) => v.message),
       )
       return
     }
-    toasts.error('Blad', fallback)
+    toasts.error('Błąd', fallback)
   }
 
   /** Regenerating replaces the whole roster - ask first when there is one. */
@@ -115,11 +118,11 @@ export default function SchedulePage() {
             const valid = response.validation?.valid
             toasts.success(
               'Grafik wygenerowany',
-              `${response.solver.message} Walidacja: ${valid ? 'bez bledow' : 'wykryto bledy'}.`,
+              `${response.solver.message} Walidacja: ${valid ? 'bez błędów' : 'wykryto błędy'}.`,
             )
           }
         },
-        onError: (err) => reportBlocked(err, 'Nie udalo sie wygenerowac grafiku.'),
+        onError: (err) => reportBlocked(err, 'Nie udało się wygenerować grafiku.'),
       },
     )
   }
@@ -131,15 +134,15 @@ export default function SchedulePage() {
         onSuccess: (response) => {
           if (response.new_warnings.length) {
             toasts.warning(
-              'Zmiana zapisana z ostrzezeniem',
-              'Twarde ograniczenia sa spelnione, ale pogorszyly sie preferencje:',
+              'Zmiana zapisana z ostrzeżeniem',
+              'Twarde ograniczenia są spełnione, ale pogorszyły się preferencje:',
               response.new_warnings.map((w) => w.message),
             )
           } else {
             toasts.success('Zmiana przeniesiona', `${employee.full_name}, ${formatDate(day.date)}`)
           }
         },
-        onError: (err) => reportBlocked(err, 'Nie udalo sie przeniesc zmiany.'),
+        onError: (err) => reportBlocked(err, 'Nie udało się przenieść zmiany.'),
       },
     )
   }
@@ -153,15 +156,15 @@ export default function SchedulePage() {
       done()
       if (response.new_warnings.length) {
         toasts.warning(
-          'Zapisano z ostrzezeniem',
-          'Operacja jest dozwolona, ale pogarsza miekkie kryteria:',
+          'Zapisano z ostrzeżeniem',
+          'Operacja jest dozwolona, ale pogarsza miękkie kryteria:',
           response.new_warnings.map((w) => w.message),
         )
       } else {
         toasts.success('Grafik zaktualizowany')
       }
     }
-    const onError = (err: unknown) => reportBlocked(err, 'Operacja nie powiodla sie.')
+    const onError = (err: unknown) => reportBlocked(err, 'Operacja nie powiodła się.')
 
     if (code === null) {
       if (!assignment) return done()
@@ -201,7 +204,7 @@ export default function SchedulePage() {
               {schedule.solver_status && <span>&middot; solver: {schedule.solver_status}</span>}
             </span>
           ) : (
-            'Ten miesiac nie ma jeszcze grafiku.'
+            'Ten miesiąc nie ma jeszcze grafiku.'
           )
         }
         actions={
@@ -231,12 +234,12 @@ export default function SchedulePage() {
                     validate.mutate(schedule.id, {
                       onSuccess: (response) =>
                         toasts.success(
-                          'Walidacja zakonczona',
+                          'Walidacja zakończona',
                           response.validation.valid
-                            ? 'Grafik spelnia wszystkie twarde ograniczenia.'
-                            : `Wykryto ${response.validation.errors.length} bledow.`,
+                            ? 'Grafik spełnia wszystkie twarde ograniczenia.'
+                            : `Wykryto ${response.validation.errors.length} błędów.`,
                         ),
-                      onError: (err) => reportBlocked(err, 'Nie udalo sie zwalidowac grafiku.'),
+                      onError: (err) => reportBlocked(err, 'Nie udało się zwalidować grafiku.'),
                     })
                   }
                   disabled={busy}
@@ -251,9 +254,9 @@ export default function SchedulePage() {
                       approve.mutate(
                         { id: schedule.id, undo: true },
                         {
-                          onSuccess: () => toasts.success('Cofnieto zatwierdzenie'),
+                          onSuccess: () => toasts.success('Cofnięto zatwierdzenie'),
                           onError: (err) =>
-                            reportBlocked(err, 'Nie udalo sie cofnac zatwierdzenia.'),
+                            reportBlocked(err, 'Nie udało się cofnąć zatwierdzenia.'),
                         },
                       )
                     }
@@ -271,25 +274,25 @@ export default function SchedulePage() {
                         {
                           onSuccess: () => toasts.success('Grafik zatwierdzony'),
                           onError: (err) =>
-                            reportBlocked(err, 'Nie udalo sie zatwierdzic grafiku.'),
+                            reportBlocked(err, 'Nie udało się zatwierdzić grafiku.'),
                         },
                       )
                     }
                     disabled={busy}
                     type="button"
                   >
-                    <i className="bi bi-check-lg me-1" /> Zatwierdz
+                    <i className="bi bi-check-lg me-1" /> Zatwierdź
                   </button>
                 )}
                 <button
-                  className="btn btn-outline-dark"
+                  className="btn btn-outline-secondary"
                   onClick={() =>
                     downloadFile(
                       `/api/schedules/${schedule.id}/pdf`,
                       `grafik_${year}_${String(month).padStart(2, '0')}.pdf`,
                     ).catch((err: unknown) =>
                       toasts.error(
-                        'Nie udalo sie pobrac PDF',
+                        'Nie udało się pobrać PDF',
                         err instanceof ApiError ? err.message : undefined,
                       ),
                     )
@@ -312,7 +315,7 @@ export default function SchedulePage() {
           </h6>
           {solverReport.diagnostics.length > 0 && (
             <>
-              <div className="fw-semibold small mt-2">Mozliwe przyczyny:</div>
+              <div className="fw-semibold small mt-2">Możliwe przyczyny:</div>
               <ul className="mb-2 small">
                 {solverReport.diagnostics.slice(0, 8).map((item, index) => (
                   <li key={index}>{item.message}</li>
@@ -354,11 +357,11 @@ export default function SchedulePage() {
         <div className="alert alert-info py-2 d-flex justify-content-between align-items-center" role="alert">
           <span>
             <i className="bi bi-pencil-square me-2" />
-            Ten grafik jest ukladany recznie - system go nie generuje. Edytuj go w module
-            Reczne ukladanie.
+            Ten grafik jest układany ręcznie - system go nie generuje. Edytuj go w module
+            Ręczne układanie.
           </span>
           <Link className="btn btn-sm btn-primary" to={`/reczne?year=${year}&month=${month}`}>
-            Otworz reczne ukladanie
+            Otwórz ręczne układanie
           </Link>
         </div>
       )}
@@ -366,14 +369,14 @@ export default function SchedulePage() {
       {schedule?.status === 'APPROVED' && (
         <div className="alert alert-dark py-2" role="alert">
           <i className="bi bi-lock me-2" />
-          Grafik jest zatwierdzony i zablokowany do edycji. Aby wprowadzic zmiany, cofnij
+          Grafik jest zatwierdzony i zablokowany do edycji. Aby wprowadzić zmiany, cofnij
           zatwierdzenie.
         </div>
       )}
 
       {data.employees.length === 0 ? (
-        <EmptyState icon="bi-people" title="Brak aktywnych pracownikow">
-          Dodaj pracownikow w panelu PRACOWNICY, aby moc wygenerowac grafik.
+        <EmptyState icon="bi-people" title="Brak aktywnych pracowników">
+          Dodaj pracowników w panelu PRACOWNICY, aby móc wygenerować grafik.
         </EmptyState>
       ) : (
         <>
@@ -402,18 +405,18 @@ export default function SchedulePage() {
               <strong>W</strong> = wolne
             </span>
             <span>
-              <span className="legend-swatch" style={{ background: 'var(--nurse-weekend)' }} />
+              <span className="legend-swatch" style={{ background: 'var(--app-weekend)' }} />
               weekend
             </span>
             <span>
-              <span className="legend-swatch" style={{ background: 'var(--nurse-holiday)' }} />
-              swieto
+              <span className="legend-swatch" style={{ background: 'var(--app-holiday)' }} />
+              święto
             </span>
             <span>
               <span className="legend-swatch unavailable-cell" />
-              niedostepnosc
+              niedostępność
             </span>
-            {editable && <span className="ms-auto">Przeciagnij zmiane, aby ja przeniesc.</span>}
+            {editable && <span className="ms-auto">Przeciągnij zmianę, aby ją przenieść.</span>}
           </div>
 
           <div className="row g-3">
@@ -437,14 +440,14 @@ export default function SchedulePage() {
                           downloadFile(
                             `/api/schedules/${schedule.id}/employee/${employeeId}/pdf`,
                             `grafik_${year}_${String(month).padStart(2, '0')}_${employeeId}.pdf`,
-                          ).catch(() => toasts.error('Blad', 'Nie udalo sie pobrac PDF.'))
+                          ).catch(() => toasts.error('Błąd', 'Nie udało się pobrać PDF.'))
                       : undefined
                   }
                 />
               ) : (
                 <div className="card shadow-sm">
                   <div className="card-body text-secondary small">
-                    Statystyki pojawia sie po wygenerowaniu lub walidacji grafiku.
+                    Statystyki pojawia się po wygenerowaniu lub walidacji grafiku.
                   </div>
                 </div>
               )}
@@ -455,7 +458,7 @@ export default function SchedulePage() {
 
       {confirmRegenerate && data && (
         <Modal
-          title="Wygenerowac grafik od nowa?"
+          title="Wygenerować grafik od nowa?"
           onClose={() => setConfirmRegenerate(false)}
           footer={
             <>
@@ -473,13 +476,13 @@ export default function SchedulePage() {
           }
         >
           <p>
-            Solver ulozy caly miesiac od poczatku i zastapi obecny grafik ({data.assignments.length}{' '}
+            Solver ułoży cały miesiąc od początku i zastąpi obecny grafik ({data.assignments.length}{' '}
             zmian).
           </p>
           {manualMode && (
             <div className="alert alert-info py-2 small">
               <i className="bi bi-pencil-square me-1" />
-              Ten miesiac jest ukladany recznie. Wygenerowanie przelaczy go z powrotem na tryb
+              Ten miesiąc jest układany ręcznie. Wygenerowanie przełączy go z powrotem na tryb
               automatyczny.
             </div>
           )}
@@ -487,12 +490,12 @@ export default function SchedulePage() {
             <div className="alert alert-warning py-2 small">
               <i className="bi bi-exclamation-triangle me-1" />
               Obecny grafik zawiera{' '}
-              {data.assignments.filter((a) => a.manually_modified).length} recznie poprawionych
-              zmian - nie zostana zachowane w nowym grafiku.
+              {data.assignments.filter((a) => a.manually_modified).length} ręcznie poprawionych
+              zmian - nie zostaną zachowane w nowym grafiku.
             </div>
           )}
           <p className="small text-secondary mb-0">
-            Obecna wersja zostanie zapisana w Historii i bedzie mozna ja przywrocic.
+            Obecna wersja zostanie zapisana w Historii i będzie można ją przywrócić.
           </p>
         </Modal>
       )}
@@ -524,7 +527,7 @@ export default function SchedulePage() {
               {cell.day.holiday_name}
             </div>
           )}
-          <p className="text-secondary small">Wybierz zmiane dla tego dnia:</p>
+          <p className="text-secondary small">Wybierz zmianę dla tego dnia:</p>
           <div className="d-grid gap-2">
             {data.shifts.map((shift) => (
               <button
@@ -539,7 +542,7 @@ export default function SchedulePage() {
                 <strong className="me-2">{shift.code}</strong>
                 {shift.name} ({shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)})
                 {!shiftAllowedOn(shift, cell.day) && (
-                  <span className="small ms-2">- nie w weekend / swieto</span>
+                  <span className="small ms-2">- nie w weekend / święto</span>
                 )}
               </button>
             ))}

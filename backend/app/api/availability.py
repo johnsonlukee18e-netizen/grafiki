@@ -148,7 +148,7 @@ def update_availability(
 ) -> AvailabilityOut:
     row = db.get(Availability, availability_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Nie znaleziono wpisu dostepnosci.")
+        raise HTTPException(status_code=404, detail="Nie znaleziono wpisu dostępności.")
     changes = payload.model_dump(exclude_unset=True)
     for field, value in changes.items():
         setattr(row, field, value)
@@ -178,7 +178,7 @@ def delete_availability(
 ) -> None:
     row = db.get(Availability, availability_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Nie znaleziono wpisu dostepnosci.")
+        raise HTTPException(status_code=404, detail="Nie znaleziono wpisu dostępności.")
     metadata = {"employee_id": row.employee_id, "date": row.day.isoformat()}
     db.delete(row)
     audit_service.record(

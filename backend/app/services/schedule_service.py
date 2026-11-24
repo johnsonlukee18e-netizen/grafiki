@@ -209,7 +209,7 @@ def current_validation(
 def is_manual_draft(schedule: Schedule) -> bool:
     """A hand-built roster the manager has not sent for checking yet.
 
-    Its rules are checked only on request ("Wyslij do sprawdzenia"), so
+    Its rules are checked only on request ("Wyślij do sprawdzenia"), so
     merely opening the page must not turn it VALID / INVALID.
     """
     return schedule.mode is ScheduleMode.MANUAL and schedule.status is ScheduleStatus.DRAFT
@@ -225,18 +225,18 @@ def generate_schedule(
     """Run OR-Tools, store the roster and validate it independently."""
     if not try_lock_month_generation(db, year, month):
         raise ScheduleError(
-            "Grafik na ten miesiac jest wlasnie generowany. Poczekaj na wynik i odswiez strone."
+            "Grafik na ten miesiąc jest właśnie generowany. Poczekaj na wynik i odśwież stronę."
         )
     schedule = lock_schedule(db, get_or_create(db, year, month, user))
     if schedule.status is ScheduleStatus.APPROVED:
         raise ScheduleError(
-            "Grafik jest juz zatwierdzony. Cofnij zatwierdzenie, aby wygenerowac go ponownie."
+            "Grafik jest już zatwierdzony. Cofnij zatwierdzenie, aby wygenerować go ponownie."
         )
 
     ctx = build_context_for(db, schedule)
     if not ctx.shifts:
         raise ScheduleError(
-            "Nie zdefiniowano zadnych aktywnych zmian. Uzupelnij USTAWIENIA.", status=400
+            "Nie zdefiniowano żadnych aktywnych zmian. Uzupełnij USTAWIENIA.", status=400
         )
 
     schedule.status = ScheduleStatus.GENERATING
@@ -381,7 +381,7 @@ def apply_manual_change(
     db.expire_all()  # read the roster as it is now, after any edit we waited for
     if schedule.status is ScheduleStatus.APPROVED:
         raise ScheduleError(
-            "Grafik jest zatwierdzony i nie mozna go edytowac. Cofnij zatwierdzenie."
+            "Grafik jest zatwierdzony i nie można go edytować. Cofnij zatwierdzenie."
         )
     if schedule.status is ScheduleStatus.ARCHIVED:
         raise ScheduleError("Grafik jest zarchiwizowany i tylko do odczytu.")
@@ -406,7 +406,7 @@ def apply_manual_change(
     if new_errors:
         savepoint.rollback()
         raise ScheduleError(
-            "Nie mozna wykonac operacji - zlamalaby twarde ograniczenie grafiku.",
+            "Nie można wykonać operacji - złamałaby twarde ograniczenie grafiku.",
             details={"errors": new_errors},
         )
     savepoint.commit()
@@ -464,7 +464,7 @@ def create_assignment(
         )
         if existing is not None:
             raise ScheduleError(
-                "Pracownik ma juz zmiane tego dnia. Zmien istniejaca zmiane zamiast dodawac nowa."
+                "Pracownik ma już zmianę tego dnia. Zmień istniejącą zmianę zamiast dodawać nową."
             )
         assignment = _build_assignment(sched, employee_id, shift, work_date, manual=True)
         session.add(assignment)
@@ -531,7 +531,7 @@ def update_assignment(
         )
         if clash is not None:
             raise ScheduleError(
-                "Pracownik ma juz inna zmiane tego dnia - najpierw zwolnij ten dzien."
+                "Pracownik ma już inną zmianę tego dnia - najpierw zwolnij ten dzień."
             )
         shift = session.get(Shift, row.shift_id)
         from app.services.planning import to_shift_def
@@ -545,7 +545,7 @@ def update_assignment(
         db,
         schedule,
         mutate,
-        reason=f"Reczna zmiana przypisania #{assignment_id}",
+        reason=f"Ręczna zmiana przypisania #{assignment_id}",
         user=user,
         audit_action=AuditAction.ASSIGNMENT_MOVED if moved else AuditAction.ASSIGNMENT_UPDATED,
         audit_metadata={
@@ -582,7 +582,7 @@ def delete_assignment(db: Session, assignment_id: int, user: User | None) -> Edi
         db,
         schedule,
         mutate,
-        reason=f"Usuniecie zmiany ({details['date']})",
+        reason=f"Usunięcie zmiany ({details['date']})",
         user=user,
         audit_action=AuditAction.ASSIGNMENT_DELETED,
         audit_metadata=details,
@@ -592,7 +592,7 @@ def delete_assignment(db: Session, assignment_id: int, user: User | None) -> Edi
 def _require_in_month(schedule: Schedule, work_date: date) -> None:
     if work_date.year != schedule.year or work_date.month != schedule.month:
         raise ScheduleError(
-            "Data spoza miesiaca grafiku. Edytuj grafik wlasciwego miesiaca.", status=400
+            "Data spoza miesiąca grafiku. Edytuj grafik właściwego miesiąca.", status=400
         )
 
 
@@ -601,18 +601,18 @@ def approve(db: Session, schedule: Schedule, user: User | None) -> ValidationRes
     """Approve, but never an invalid schedule."""
     lock_schedule(db, schedule)
     if schedule.status is ScheduleStatus.APPROVED:
-        raise ScheduleError("Grafik jest juz zatwierdzony.")
+        raise ScheduleError("Grafik jest już zatwierdzony.")
     if schedule.status is ScheduleStatus.ARCHIVED:
         raise ScheduleError("Grafik jest zarchiwizowany.")
     result = run_validation(db, schedule)
     if not result.valid:
         raise ScheduleError(
-            "Nie mozna zatwierdzic grafiku z bledami twardych ograniczen. "
-            "Popraw bledy wskazane w panelu walidacji.",
+            "Nie można zatwierdzić grafiku z błędami twardych ograniczeń. "
+            "Popraw błędy wskazane w panelu walidacji.",
             details={"errors": result.as_dict()["errors"]},
         )
     if db.scalar(select(Assignment.id).where(Assignment.schedule_id == schedule.id).limit(1)) is None:
-        raise ScheduleError("Grafik jest pusty - nie ma czego zatwierdzac.")
+        raise ScheduleError("Grafik jest pusty - nie ma czego zatwierdzać.")
 
     _bump_version(db, schedule, "Zatwierdzenie grafiku", user)
     schedule.status = ScheduleStatus.APPROVED
@@ -634,7 +634,7 @@ def unapprove(db: Session, schedule: Schedule, user: User | None) -> Schedule:
     lock_schedule(db, schedule)
     if schedule.status is not ScheduleStatus.APPROVED:
         raise ScheduleError("Grafik nie jest zatwierdzony.")
-    _bump_version(db, schedule, "Cofniecie zatwierdzenia", user)
+    _bump_version(db, schedule, "Cofnięcie zatwierdzenia", user)
     schedule.status = ScheduleStatus.VALID
     schedule.approved_at = None
     schedule.approved_by = None
@@ -667,12 +667,12 @@ def restore_version(
     lock_schedule(db, schedule)
     if schedule.status is ScheduleStatus.APPROVED:
         raise ScheduleError(
-            "Grafik jest zatwierdzony. Cofnij zatwierdzenie, aby przywrocic starsza wersje."
+            "Grafik jest zatwierdzony. Cofnij zatwierdzenie, aby przywrócić starszą wersję."
         )
     if schedule.status is ScheduleStatus.ARCHIVED:
         raise ScheduleError("Grafik jest zarchiwizowany i tylko do odczytu.")
     if version == schedule.version:
-        raise ScheduleError("To jest biezaca wersja grafiku.", status=400)
+        raise ScheduleError("To jest bieżąca wersja grafiku.", status=400)
 
     stored = db.scalar(
         select(ScheduleVersion).where(
@@ -693,16 +693,16 @@ def restore_version(
         shift = shifts.get(item["shift_code"])
         if shift is None:
             skipped.append(
-                f"{day.isoformat()}: zmiana '{item['shift_code']}' nie jest juz aktywna."
+                f"{day.isoformat()}: zmiana '{item['shift_code']}' nie jest już aktywna."
             )
             continue
         if employee_id not in known_employees or (employee_id, day) in seen:
-            skipped.append(f"{day.isoformat()}: pominieto wpis pracownika #{employee_id}.")
+            skipped.append(f"{day.isoformat()}: pominięto wpis pracownika #{employee_id}.")
             continue
         seen.add((employee_id, day))
         restored.append((employee_id, shift, day, bool(item.get("manually_modified"))))
 
-    _bump_version(db, schedule, f"Przywrocenie wersji v{version}", user)
+    _bump_version(db, schedule, f"Przywrócenie wersji v{version}", user)
     db.execute(delete(Assignment).where(Assignment.schedule_id == schedule.id))
     db.flush()
     for employee_id, shift, day, manual in restored:
@@ -740,7 +740,7 @@ class CellChange:
 def _require_open_for_manual(schedule: Schedule) -> None:
     if schedule.status is ScheduleStatus.APPROVED:
         raise ScheduleError(
-            "Grafik jest zatwierdzony. Cofnij zatwierdzenie, aby dalej ukladac go recznie."
+            "Grafik jest zatwierdzony. Cofnij zatwierdzenie, aby dalej układać go ręcznie."
         )
     if schedule.status is ScheduleStatus.ARCHIVED:
         raise ScheduleError("Grafik jest zarchiwizowany i tylko do odczytu.")
@@ -754,7 +754,7 @@ def start_manual(db: Session, year: int, month: int, user: User | None) -> Sched
     """
     if not try_lock_month_generation(db, year, month):
         raise ScheduleError(
-            "Grafik na ten miesiac jest wlasnie generowany. Poczekaj na wynik i odswiez strone."
+            "Grafik na ten miesiąc jest właśnie generowany. Poczekaj na wynik i odśwież stronę."
         )
     schedule = lock_schedule(db, get_or_create(db, year, month, user))
     _require_open_for_manual(schedule)
@@ -795,8 +795,8 @@ def set_cells(
     db.expire_all()
     if schedule.mode is not ScheduleMode.MANUAL:
         raise ScheduleError(
-            "Ten grafik nie jest w trybie recznego ukladania. Otworz go w module "
-            "RECZNE UKLADANIE.",
+            "Ten grafik nie jest w trybie ręcznego układania. Otwórz go w module "
+            "RĘCZNE UKŁADANIE.",
         )
     _require_open_for_manual(schedule)
 
@@ -812,7 +812,7 @@ def set_cells(
         key = (cell.employee_id, cell.day)
         if key in seen:
             raise ScheduleError(
-                "Ta sama komorka grafiku wystepuje dwa razy w jednej operacji.", status=400
+                "Ta sama komórka grafiku występuje dwa razy w jednej operacji.", status=400
             )
         seen.add(key)
 
@@ -830,7 +830,7 @@ def set_cells(
         return 0
 
     if schedule.status is not ScheduleStatus.DRAFT and current:
-        _bump_version(db, schedule, "Reczne ukladanie - zmiany po sprawdzeniu", user)
+        _bump_version(db, schedule, "Ręczne układanie - zmiany po sprawdzeniu", user)
 
     for cell in pending:
         row = current.get((cell.employee_id, cell.day))

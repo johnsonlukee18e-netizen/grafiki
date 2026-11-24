@@ -46,6 +46,11 @@ export default function ScheduleGrid({
   highlight,
   ghosts,
 }: Props) {
+  const today = useMemo(() => {
+    const now = new Date()
+    const pad = (value: number) => String(value).padStart(2, '0')
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  }, [])
   const [dragged, setDragged] = useState<Assignment | null>(null)
   const [over, setOver] = useState<string | null>(null)
 
@@ -80,7 +85,7 @@ export default function ScheduleGrid({
   }, [assignments, employees])
 
   return (
-    <div className="schedule-scroll border rounded bg-white">
+    <div className="schedule-scroll">
       <table className="schedule-table w-100">
         <thead>
           <tr>
@@ -88,11 +93,18 @@ export default function ScheduleGrid({
             {days.map((day) => (
               <th
                 key={day.date}
-                className={day.is_holiday ? 'holiday' : day.is_weekend ? 'weekend' : undefined}
-                title={day.holiday_name ?? undefined}
+                className={
+                  [
+                    day.is_holiday ? 'holiday' : day.is_weekend ? 'weekend' : '',
+                    day.date === today ? 'today' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || undefined
+                }
+                title={day.holiday_name ?? (day.date === today ? 'Dziś' : undefined)}
               >
-                <div>{Number(day.date.slice(8, 10))}</div>
-                <div className="fw-normal opacity-75">{WEEKDAYS_PL[day.weekday]}</div>
+                <div className="day-num">{Number(day.date.slice(8, 10))}</div>
+                <div className="day-name">{WEEKDAYS_PL[day.weekday]}</div>
               </th>
             ))}
             <th style={{ minWidth: 60 }}>Godz.</th>
@@ -105,7 +117,7 @@ export default function ScheduleGrid({
               <tr key={employee.id}>
                 <td className="name-cell">
                   <span className={`color-bar color-${employee.color}`} />
-                  <span title={`${employee.full_name} - staz ${employee.seniority_label}`}>
+                  <span title={`${employee.full_name} - staż ${employee.seniority_label}`}>
                     {employee.last_name} {employee.first_name}
                   </span>
                   {!employee.active && (
@@ -135,14 +147,14 @@ export default function ScheduleGrid({
 
                   const title = [
                     `${employee.full_name} - ${day.date}`,
-                    day.holiday_name ? `Swieto: ${day.holiday_name}` : null,
+                    day.holiday_name ? `Święto: ${day.holiday_name}` : null,
                     declared && declared.type !== 'AVAILABLE'
-                      ? `Prosba: ${AVAILABILITY_LABEL[declared.type] ?? declared.type}${
+                      ? `Prośba: ${AVAILABILITY_LABEL[declared.type] ?? declared.type}${
                           declared.note ? ` (${declared.note})` : ''
                         }`
                       : null,
                     !assignment && ghosts?.get(key) ? `Sugestia: ${ghosts.get(key)}` : null,
-                    assignment?.manually_modified ? 'Zmiana edytowana recznie' : null,
+                    assignment?.manually_modified ? 'Zmiana edytowana ręcznie' : null,
                   ]
                     .filter(Boolean)
                     .join('\n')
@@ -203,13 +215,13 @@ export default function ScheduleGrid({
                   )
                 })}
 
-                <td className="fw-semibold">{formatMinutes(minutes)}</td>
+                <td className="fw-semibold px-2">{formatMinutes(minutes)}</td>
               </tr>
             )
           })}
 
-          {shifts.map((shift) => (
-            <tr className="coverage-row" key={`coverage-${shift.code}`}>
+          {shifts.map((shift, index) => (
+            <tr className={`coverage-row${index === 0 ? ' first' : ''}`} key={`coverage-${shift.code}`}>
               <td className="name-cell">
                 Obsada {shift.code}{' '}
                 <span className="text-secondary">
@@ -234,7 +246,7 @@ export default function ScheduleGrid({
                   <td
                     key={day.date}
                     className={short ? 'short' : undefined}
-                    title={`${count} os., w tym ${nurses} pielegniarek`}
+                    title={`${count} os., w tym ${nurses} pielęgniarek`}
                   >
                     {count}
                     {shift.minimum_nurses > 0 && (

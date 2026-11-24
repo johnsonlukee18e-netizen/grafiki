@@ -69,7 +69,7 @@ export default function AvailabilityPage() {
       start: holiday.date,
       allDay: true,
       display: 'background' as const,
-      backgroundColor: '#fde2e4',
+      backgroundColor: 'var(--app-holiday)',
     }))
     return [...holidayEvents, ...availabilityEvents]
   }, [entries, holidays, currentId])
@@ -94,8 +94,8 @@ export default function AvailabilityPage() {
   return (
     <>
       <PageHeader
-        title="Dostepnosc i preferencje"
-        subtitle="Niedostepnosc jest twardym ograniczeniem. Pozostale typy sa preferencjami (miekkimi)."
+        title="Dostępność i preferencje"
+        subtitle="Niedostępność jest twardym ograniczeniem. Pozostałe typy są preferencjami (miękkimi)."
         actions={
           <MonthPicker
             year={year}
@@ -112,7 +112,7 @@ export default function AvailabilityPage() {
       <div className="row g-3">
         <div className="col-12 col-lg-4">
           <div className="card shadow-sm mb-3">
-            <div className="card-header bg-white fw-semibold">Pracownik</div>
+            <div className="card-header fw-semibold">Pracownik</div>
             <div className="card-body">
               <select
                 className="form-select"
@@ -131,18 +131,18 @@ export default function AvailabilityPage() {
               {current && (
                 <div className="d-flex align-items-center gap-2 mt-2 small text-secondary">
                   <ColorDot color={current.color} />
-                  staz: {current.seniority_label}
+                  staż: {current.seniority_label}
                 </div>
               )}
             </div>
           </div>
 
           <div className="card shadow-sm mb-3">
-            <div className="card-header bg-white fw-semibold">
+            <div className="card-header fw-semibold">
               Zaznaczone dni ({selected.length})
             </div>
             <div className="card-body">
-              <label className="form-label small">Typ zgloszenia</label>
+              <label className="form-label small">Typ zgłoszenia</label>
               <select
                 className="form-select mb-2"
                 value={type}
@@ -169,18 +169,18 @@ export default function AvailabilityPage() {
                   disabled={selected.length === 0}
                   type="button"
                 >
-                  Wyczysc zaznaczenie
+                  Wyczyść zaznaczenie
                 </button>
               </div>
               <p className="small text-secondary mt-2 mb-0">
-                Kliknij dni w kalendarzu lub przeciagnij, aby zaznaczyc zakres.
+                Kliknij dni w kalendarzu lub przeciągnij, aby zaznaczyć zakres.
               </p>
             </div>
           </div>
 
           <div className="card shadow-sm">
-            <div className="card-header bg-white fw-semibold">
-              Zgloszenia - {monthLabel(year, month)}
+            <div className="card-header fw-semibold">
+              Zgłoszenia - {monthLabel(year, month)}
             </div>
             <ul className="list-group list-group-flush" style={{ maxHeight: 320, overflowY: 'auto' }}>
               {(entries ?? [])
@@ -201,7 +201,7 @@ export default function AvailabilityPage() {
                       className="btn btn-sm btn-outline-danger"
                       onClick={() =>
                         remove.mutate(entry.id, {
-                          onSuccess: () => toasts.success('Usunieto zgloszenie'),
+                          onSuccess: () => toasts.success('Usunięto zgłoszenie'),
                         })
                       }
                       type="button"
@@ -211,7 +211,7 @@ export default function AvailabilityPage() {
                   </li>
                 ))}
               {(entries ?? []).filter((entry) => entry.employee_id === currentId).length === 0 && (
-                <li className="list-group-item text-secondary small">Brak zgloszen.</li>
+                <li className="list-group-item text-secondary small">Brak zgłoszeń.</li>
               )}
             </ul>
           </div>
@@ -252,7 +252,7 @@ export default function AvailabilityPage() {
                 eventClick={(info) => {
                   const id = info.event.extendedProps.availabilityId as number | undefined
                   if (id) {
-                    remove.mutate(id, { onSuccess: () => toasts.success('Usunieto zgloszenie') })
+                    remove.mutate(id, { onSuccess: () => toasts.success('Usunięto zgłoszenie') })
                   }
                 }}
               />

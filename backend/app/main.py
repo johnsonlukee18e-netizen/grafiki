@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Nurse Scheduler API",
-    description="Generowanie i zarzadzanie grafikami pracy pielegniarek i opiekunek.",
+    description="Generowanie i zarządzanie grafikami pracy pielęgniarek i opiekunek.",
     version="1.0.0",
     lifespan=lifespan,
     docs_url=None if settings.is_production else "/api/docs",
@@ -113,7 +113,7 @@ async def validation_handler(request: Request, exc: RequestValidationError) -> J
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
-            "detail": "Nieprawidlowe dane wejsciowe.",
+            "detail": "Nieprawidłowe dane wejściowe.",
             "errors": [
                 {"field": ".".join(str(p) for p in error["loc"][1:]), "message": error["msg"]}
                 for error in exc.errors()
@@ -126,7 +126,7 @@ async def validation_handler(request: Request, exc: RequestValidationError) -> J
 async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
     """Never leak a stack trace to the browser; log it server-side instead."""
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
-    detail = "Wystapil nieoczekiwany blad serwera."
+    detail = "Wystąpił nieoczekiwany błąd serwera."
     if settings.debug:
         detail = f"{detail} ({type(exc).__name__}: {exc})"
     return JSONResponse(status_code=500, content={"detail": detail})
