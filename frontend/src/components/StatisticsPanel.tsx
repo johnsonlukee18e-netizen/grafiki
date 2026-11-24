@@ -18,18 +18,18 @@ export default function StatisticsPanel({
 
   return (
     <div className="card shadow-sm">
-      <div className="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <span className="fw-semibold">Statystyki</span>
         <span className="small text-secondary">
           rozrzut - noce: {fairness.nights?.spread ?? 0} &middot; weekendy:{' '}
-          {fairness.weekend_shifts?.spread ?? 0} &middot; swieta:{' '}
+          {fairness.weekend_shifts?.spread ?? 0} &middot; święta:{' '}
           {fairness.holiday_shifts?.spread ?? 0} &middot; godziny:{' '}
           {formatMinutes(fairness.minutes?.spread ?? 0)}
         </span>
       </div>
       <div className="table-responsive">
         <table className="table table-sm table-hover align-middle mb-0">
-          <thead className="table-light">
+          <thead className="">
             <tr>
               <th>Pracownik</th>
               <th className="text-end">Godziny</th>
@@ -41,7 +41,7 @@ export default function StatisticsPanel({
               <th className="text-center">So</th>
               <th className="text-center">Nd</th>
               <th className="text-center">Weekendy</th>
-              <th className="text-center">Swieta</th>
+              <th className="text-center">Święta</th>
               <th className="text-center">Wolne</th>
               {onEmployeePdf && <th />}
             </tr>

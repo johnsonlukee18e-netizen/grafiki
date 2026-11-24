@@ -44,19 +44,19 @@ function friendlyMessage(status: number, payload: unknown): string {
   }
   switch (status) {
     case 401:
-      return 'Sesja wygasla. Zaloguj sie ponownie.'
+      return 'Sesja wygasła. Zaloguj się ponownie.'
     case 403:
-      return 'Nie masz uprawnien do wykonania tej operacji.'
+      return 'Nie masz uprawnień do wykonania tej operacji.'
     case 404:
       return 'Nie znaleziono zasobu.'
     case 409:
       return 'Operacja jest sprzeczna z regulami grafiku.'
     case 422:
-      return 'Nieprawidlowe dane wejsciowe.'
+      return 'Nieprawidłowe dane wejściowe.'
     case 429:
-      return 'Zbyt wiele zadan. Odczekaj chwile.'
+      return 'Zbyt wiele zadań. Odczekaj chwilę.'
     default:
-      return 'Wystapil blad serwera. Sprobuj ponownie.'
+      return 'Wystąpił błąd serwera. Spróbuj ponownie.'
   }
 }
 

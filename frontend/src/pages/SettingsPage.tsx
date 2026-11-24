@@ -42,7 +42,7 @@ export default function SettingsPage() {
     const weeklyMinutes = parseHoursMinutes(weekly)
     const restMinutes = parseHoursMinutes(rest)
     if (weeklyMinutes === null || restMinutes === null) {
-      toasts.error('Nieprawidlowy format', 'Uzyj formatu GG:MM, np. 37:55.')
+      toasts.error('Nieprawidłowy format', 'Użyj formatu GG:MM, np. 37:55.')
       return
     }
     save.mutate(
@@ -80,11 +80,11 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader
-        title="Ustawienia oddzialu"
+        title="Ustawienia oddziału"
         subtitle={
           isAdmin
-            ? 'Zmiany wplywaja na generator i walidator - obowiazuja od nastepnej generacji.'
-            : 'Podglad ustawien. Edycja wymaga roli ADMIN.'
+            ? 'Zmiany wpływają na generator i walidator - obowiązują od następnej generacji.'
+            : 'Podgląd ustawień. Edycja wymaga roli ADMIN.'
         }
         actions={
           isAdmin && (
@@ -99,10 +99,10 @@ export default function SettingsPage() {
         <div className="row g-3">
           <div className="col-12 col-xl-6">
             <div className="card shadow-sm h-100">
-              <div className="card-header bg-white fw-semibold">Placowka</div>
+              <div className="card-header fw-semibold">Placówka</div>
               <div className="card-body">
                 <div className="mb-3">
-                  <label className="form-label">Nazwa placowki</label>
+                  <label className="form-label">Nazwa placówki</label>
                   <input
                     className="form-control"
                     value={form.facility_name}
@@ -110,7 +110,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="mb-0">
-                  <label className="form-label">Oddzial</label>
+                  <label className="form-label">Oddział</label>
                   <input
                     className="form-control"
                     value={form.department_name}
@@ -123,7 +123,7 @@ export default function SettingsPage() {
 
           <div className="col-12 col-xl-6">
             <div className="card shadow-sm h-100">
-              <div className="card-header bg-white fw-semibold">Twarde ograniczenia</div>
+              <div className="card-header fw-semibold">Twarde ograniczenia</div>
               <div className="card-body">
                 <div className="row g-3">
                   <div className="col-6">
@@ -134,7 +134,7 @@ export default function SettingsPage() {
                       onChange={(e) => setWeekly(e.target.value)}
                       placeholder="37:55"
                     />
-                    <div className="form-text">Tydzien: poniedzialek - niedziela.</div>
+                    <div className="form-text">Tydzień: poniedziałek - niedziela.</div>
                   </div>
                   <div className="col-6">
                     <label className="form-label">Minimalny odpoczynek (GG:MM)</label>
@@ -165,12 +165,12 @@ export default function SettingsPage() {
                         set('sunday_rule_mode', e.target.value as DepartmentConfig['sunday_rule_mode'])
                       }
                     >
-                      <option value="SLIDING">Przesuwny (kazde N kolejnych niedziel)</option>
+                      <option value="SLIDING">Przesuwny (każde N kolejnych niedziel)</option>
                       <option value="BLOCK">Blokowy (od daty zakotwiczenia)</option>
                     </select>
                   </div>
                   <div className="col-6">
-                    <label className="form-label">Poczatek cyklu (tryb blokowy)</label>
+                    <label className="form-label">Początek cyklu (tryb blokowy)</label>
                     <input
                       type="date"
                       className="form-control"
@@ -188,7 +188,7 @@ export default function SettingsPage() {
                         onChange={(e) => set('sunday_includes_saturday_night', e.target.checked)}
                       />
                       <label className="form-check-label small" htmlFor="satNight">
-                        Nocka z soboty liczy sie jako praca w niedziele
+                        Nocka z soboty liczy się jako praca w niedzielę
                       </label>
                     </div>
                   </div>
@@ -199,7 +199,7 @@ export default function SettingsPage() {
 
           <div className="col-12 col-xl-6">
             <div className="card shadow-sm h-100">
-              <div className="card-header bg-white fw-semibold">Solver</div>
+              <div className="card-header fw-semibold">Solver</div>
               <div className="card-body">
                 <div className="row g-3">
                   <div className="col-4">
@@ -225,7 +225,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="col-4">
-                    <label className="form-label">Watki</label>
+                    <label className="form-label">Wątki</label>
                     <input
                       type="number"
                       min={1}
@@ -246,7 +246,7 @@ export default function SettingsPage() {
                         onChange={(e) => set('allow_overstaffing', e.target.checked)}
                       />
                       <label className="form-check-label small" htmlFor="overstaffing">
-                        Pozwol obsadzic zmiane powyzej minimum
+                        Pozwól obsadzić zmianę powyżej minimum
                       </label>
                     </div>
                   </div>
@@ -257,20 +257,20 @@ export default function SettingsPage() {
 
           <div className="col-12 col-xl-6">
             <div className="card shadow-sm h-100">
-              <div className="card-header bg-white fw-semibold">
-                Wagi miekkich kryteriow (wyzsza = wazniejsze)
+              <div className="card-header fw-semibold">
+                Wagi miękkich kryteriów (wyższa = ważniejsze)
               </div>
               <div className="card-body">
                 <div className="row g-3">
                   {(
                     [
-                      ['weight_night_fairness', 'Rowny podzial nocy'],
-                      ['weight_weekend_fairness', 'Rowny podzial weekendow'],
-                      ['weight_holiday_fairness', 'Rowny podzial swiat'],
-                      ['weight_hours_fairness', 'Rowny podzial godzin'],
+                      ['weight_night_fairness', 'Równy podział nocy'],
+                      ['weight_weekend_fairness', 'Równy podział weekendów'],
+                      ['weight_holiday_fairness', 'Równy podział świąt'],
+                      ['weight_hours_fairness', 'Równy podział godzin'],
                       ['weight_preferences', 'Preferencje zmian'],
                       ['weight_preferred_off', 'Preferowane dni wolne'],
-                      ['weight_coverage_bonus', 'Premia za obsade ponad minimum'],
+                      ['weight_coverage_bonus', 'Premia za obsadę ponad minimum'],
                     ] as const
                   ).map(([key, label]) => (
                     <div className="col-6" key={key}>
@@ -292,22 +292,22 @@ export default function SettingsPage() {
 
           <div className="col-12">
             <div className="card shadow-sm">
-              <div className="card-header bg-white fw-semibold">Zmiany</div>
+              <div className="card-header fw-semibold">Zmiany</div>
               <div className="table-responsive">
                 <table className="table align-middle mb-0">
-                  <thead className="table-light">
+                  <thead className="">
                     <tr>
                       <th>Kod</th>
                       <th>Nazwa</th>
-                      <th>Poczatek</th>
+                      <th>Początek</th>
                       <th>Koniec</th>
                       <th>Czas</th>
-                      <th>Przez polnoc</th>
+                      <th>Przez północ</th>
                       <th>Min. obsada</th>
-                      <th title="Ile osob z minimalnej obsady musi miec role pielegniarki">
-                        Min. pielegniarek
+                      <th title="Ile osób z minimalnej obsady musi mieć rolę pielęgniarki">
+                        Min. pielęgniarek
                       </th>
-                      <th title="Zmiana nie wystepuje w soboty, niedziele i swieta">
+                      <th title="Zmiana nie występuje w soboty, niedziele i święta">
                         Tylko dni robocze
                       </th>
                       <th>Aktywna</th>
@@ -325,7 +325,7 @@ export default function SettingsPage() {
                             { id: shift.id, ...payload },
                             {
                               onSuccess: () => toasts.success(`Zmiana ${shift.code} zapisana`),
-                              onError: (err) => toasts.error('Blad', (err as Error).message),
+                              onError: (err) => toasts.error('Błąd', (err as Error).message),
                             },
                           )
                         }
@@ -451,9 +451,9 @@ function ShiftRow({
           style={{ width: 80 }}
           value={draft.minimum_nurses}
           onChange={(e) => setDraft({ ...draft, minimum_nurses: Number(e.target.value) })}
-          title="Opiekunka nie zastapi pielegniarki - 0 wylacza regule"
+          title="Opiekunka nie zastąpi pielęgniarki - 0 wyłącza regułę"
         />
-        {nursesInvalid && <div className="invalid-feedback">Wiecej niz obsada</div>}
+        {nursesInvalid && <div className="invalid-feedback">Więcej niż obsada</div>}
       </td>
       <td>
         <div className="form-check form-switch">
@@ -462,7 +462,7 @@ function ShiftRow({
             type="checkbox"
             checked={draft.workdays_only}
             onChange={(e) => setDraft({ ...draft, workdays_only: e.target.checked })}
-            title="Nie w weekendy i swieta"
+            title="Nie w weekendy i święta"
           />
         </div>
       </td>

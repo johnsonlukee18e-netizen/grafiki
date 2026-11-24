@@ -48,13 +48,13 @@ def google_callback(
 ) -> RedirectResponse:
     if error:
         logger.info("Google returned an error to the callback")
-        return _login_redirect("Logowanie zostalo przerwane.")
+        return _login_redirect("Logowanie zostało przerwane.")
 
     stored = session_module.read_oauth_state(request)
     if stored is None:
-        return _login_redirect("Sesja logowania wygasla. Sprobuj ponownie.")
+        return _login_redirect("Sesja logowania wygasła. Spróbuj ponownie.")
     if not state or not code or state != stored.get("state"):
-        return _login_redirect("Nieprawidlowy parametr state - logowanie odrzucone.")
+        return _login_redirect("Nieprawidłowy parametr state - logowanie odrzucone.")
 
     try:
         tokens = oauth.exchange_code(code)
@@ -68,7 +68,7 @@ def google_callback(
         # has granted it access to this system yet (or it was revoked).
         db.commit()
         return _login_redirect(
-            "Twoje konto czeka na zatwierdzenie przez administratora oddzialu."
+            "Twoje konto czeka na zatwierdzenie przez administratora oddziału."
         )
 
     audit_service.record(

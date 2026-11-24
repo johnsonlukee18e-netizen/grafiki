@@ -17,7 +17,7 @@ class DepartmentConfig(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, default=1)
     facility_name: Mapped[str] = mapped_column(String(200), default="Szpital", nullable=False)
-    department_name: Mapped[str] = mapped_column(String(200), default="Oddzial", nullable=False)
+    department_name: Mapped[str] = mapped_column(String(200), default="Oddział", nullable=False)
 
     #: 37 h 55 min == 2275 minutes. Always minutes, never floats.
     weekly_minutes_limit: Mapped[int] = mapped_column(Integer, default=2275, nullable=False)

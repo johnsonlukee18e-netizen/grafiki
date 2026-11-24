@@ -4,6 +4,7 @@ import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import { UNAUTHORIZED_EVENT } from './api/client'
 import { useAuthStatus, useLogout } from './api/hooks'
 import { Loading } from './components/common'
+import { type ThemePreference, useTheme } from './theme'
 import AvailabilityPage from './pages/AvailabilityPage'
 import AuditPage from './pages/AuditPage'
 import DashboardPage from './pages/DashboardPage'
@@ -23,23 +24,55 @@ interface NavItem {
   adminOnly?: boolean
 }
 
-const NAV: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: 'bi-speedometer2' },
-  { to: '/grafik', label: 'Grafik', icon: 'bi-calendar3' },
-  { to: '/reczne', label: 'Reczne ukladanie', icon: 'bi-pencil-square' },
-  { to: '/pracownicy', label: 'Pracownicy', icon: 'bi-people' },
-  { to: '/dostepnosc', label: 'Dostepnosc', icon: 'bi-calendar-check' },
-  { to: '/swieta', label: 'Swieta', icon: 'bi-stars' },
-  { to: '/historia', label: 'Historia grafikow', icon: 'bi-clock-history' },
-  { to: '/ustawienia', label: 'Ustawienia', icon: 'bi-gear' },
-  { to: '/uzytkownicy', label: 'Uzytkownicy', icon: 'bi-shield-lock', adminOnly: true },
-  { to: '/audyt', label: 'Dziennik zdarzen', icon: 'bi-journal-text', adminOnly: true },
+const NAV: { section: string; items: NavItem[] }[] = [
+  {
+    section: 'Planowanie',
+    items: [
+      { to: '/', label: 'Pulpit', icon: 'bi-grid-1x2' },
+      { to: '/grafik', label: 'Grafik', icon: 'bi-calendar3' },
+      { to: '/reczne', label: 'Ręczne układanie', icon: 'bi-pencil-square' },
+      { to: '/dostepnosc', label: 'Dostępność', icon: 'bi-calendar-check' },
+      { to: '/historia', label: 'Historia grafików', icon: 'bi-clock-history' },
+    ],
+  },
+  {
+    section: 'Oddział',
+    items: [
+      { to: '/pracownicy', label: 'Pracownicy', icon: 'bi-people' },
+      { to: '/swieta', label: 'Święta', icon: 'bi-stars' },
+      { to: '/ustawienia', label: 'Ustawienia', icon: 'bi-sliders' },
+    ],
+  },
+  {
+    section: 'Administracja',
+    items: [
+      { to: '/uzytkownicy', label: 'Użytkownicy', icon: 'bi-shield-lock', adminOnly: true },
+      { to: '/audyt', label: 'Dziennik zdarzeń', icon: 'bi-journal-text', adminOnly: true },
+    ],
+  },
 ]
+
+const ROLE_NAME: Record<string, string> = {
+  ADMIN: 'Administrator',
+  MANAGER: 'Kierownik',
+}
+
+const THEMES: { value: ThemePreference; icon: string; label: string }[] = [
+  { value: 'auto', icon: 'bi-circle-half', label: 'Jak w systemie' },
+  { value: 'light', icon: 'bi-sun', label: 'Jasny' },
+  { value: 'dark', icon: 'bi-moon-stars', label: 'Ciemny' },
+]
+
+function initials(name: string): string {
+  const parts = name.replace(/@.*/, '').split(/[\s._-]+/).filter(Boolean)
+  return ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase()
+}
 
 export default function App() {
   const { data, isLoading } = useAuthStatus()
   const navigate = useNavigate()
   const logout = useLogout()
+  const [theme, setTheme] = useTheme()
 
   useEffect(() => {
     const handler = () => navigate('/login', { replace: true })
@@ -66,48 +99,84 @@ export default function App() {
 
   const user = data.user!
   const isAdmin = user.role === 'ADMIN'
-  const visible = NAV.filter((item) => !item.adminOnly || isAdmin)
+  const displayName = user.name || user.email
 
   return (
     <div className="app-shell">
       <aside className="app-sidebar p-3">
-        <div className="d-flex align-items-center gap-2 mb-4 px-1">
-          <i className="bi bi-hospital fs-4 text-primary" />
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            <i className="bi bi-calendar2-heart" />
+          </span>
           <div>
-            <div className="fw-semibold text-white lh-1">Grafiki</div>
-            <div className="small text-secondary">oddzial szpitalny</div>
+            <div className="brand-name">Grafiki</div>
+            <div className="brand-sub">oddział szpitalny</div>
           </div>
         </div>
 
-        <nav className="nav nav-pills flex-column gap-1">
-          {visible.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
-              <i className={`bi ${item.icon}`} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+        <nav aria-label="Nawigacja główna">
+          {NAV.map((group) => {
+            const items = group.items.filter((item) => !item.adminOnly || isAdmin)
+            if (items.length === 0) return null
+            return (
+              <div key={group.section}>
+                <div className="nav-section">{group.section}</div>
+                <div className="nav flex-column gap-1">
+                  {items.map((item) => (
+                    <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
+                      <i className={`bi ${item.icon}`} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </nav>
 
-        <hr className="text-secondary" />
-
-        <div className="px-1 small">
-          <div className="text-white text-truncate" title={user.email}>
-            {user.name || user.email}
+        <div className="sidebar-footer">
+          <div className="btn-group w-100 mb-3 theme-switch" role="group" aria-label="Wygląd">
+            {THEMES.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`btn btn-sm ${
+                  theme === option.value ? 'btn-primary' : 'btn-outline-secondary'
+                }`}
+                onClick={() => setTheme(option.value)}
+                title={`Wygląd: ${option.label}`}
+                aria-label={`Wygląd: ${option.label}`}
+                aria-pressed={theme === option.value}
+              >
+                <i className={`bi ${option.icon}`} aria-hidden="true" />
+              </button>
+            ))}
           </div>
-          <div className="text-secondary mb-2">{user.role}</div>
+
+          <div className="d-flex align-items-center gap-2 mb-2 px-1">
+            <span className="avatar" aria-hidden="true">
+              {initials(displayName)}
+            </span>
+            <div className="small lh-sm" style={{ minWidth: 0 }}>
+              <div className="fw-semibold text-truncate" title={user.email}>
+                {displayName}
+              </div>
+              <div className="text-secondary">{ROLE_NAME[user.role] ?? user.role}</div>
+            </div>
+          </div>
           <button
-            className="btn btn-sm btn-outline-light w-100"
+            className="btn btn-sm btn-outline-secondary w-100"
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
             type="button"
           >
-            <i className="bi bi-box-arrow-right me-1" />
+            <i className="bi bi-box-arrow-right me-1" aria-hidden="true" />
             Wyloguj
           </button>
         </div>
       </aside>
 
-      <main className="app-main p-3 p-lg-4">
+      <main className="app-main">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/grafik" element={<SchedulePage />} />

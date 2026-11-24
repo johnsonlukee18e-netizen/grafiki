@@ -45,7 +45,7 @@ def create_custom_holiday(
         select(Holiday).where(Holiday.day == payload.date, Holiday.country == payload.country)
     )
     if existing is not None:
-        raise HTTPException(status_code=409, detail="Ten dzien jest juz oznaczony jako swieto.")
+        raise HTTPException(status_code=409, detail="Ten dzień jest już oznaczony jako święto.")
     row = Holiday(day=payload.date, name=payload.name, country=payload.country, is_custom=True)
     db.add(row)
     db.flush()
@@ -72,11 +72,11 @@ def delete_custom_holiday(
 ) -> None:
     row = db.get(Holiday, holiday_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Nie znaleziono swieta.")
+        raise HTTPException(status_code=404, detail="Nie znaleziono święta.")
     if not row.is_custom:
         raise HTTPException(
             status_code=400,
-            detail="Swiat ustawowych nie mozna usuwac - wynikaja z przepisow.",
+            detail="Świąt ustawowych nie można usuwać - wynikają z przepisów.",
         )
     db.delete(row)
     audit_service.record(

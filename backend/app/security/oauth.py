@@ -62,7 +62,7 @@ def _discovery() -> dict[str, Any]:
         response = httpx.get(settings.google_discovery_url, timeout=_HTTP_TIMEOUT)
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        raise OAuthError("Nie udalo sie pobrac konfiguracji Google OAuth.") from exc
+        raise OAuthError("Nie udało się pobrać konfiguracji Google OAuth.") from exc
     _cache.discovery = response.json()
     _cache.discovery_at = time.time()
     return _cache.discovery
@@ -78,7 +78,7 @@ def _jwks():
         response = httpx.get(uri, timeout=_HTTP_TIMEOUT)
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        raise OAuthError("Nie udalo sie pobrac kluczy Google (JWKS).") from exc
+        raise OAuthError("Nie udało się pobrać kluczy Google (JWKS).") from exc
     _cache.jwks = JsonWebKey.import_key_set(response.json())
     _cache.jwks_at = time.time()
     return _cache.jwks
@@ -124,14 +124,14 @@ def exchange_code(code: str) -> dict[str, Any]:
     try:
         response = httpx.post(endpoint, data=data, timeout=_HTTP_TIMEOUT)
     except httpx.HTTPError as exc:
-        raise OAuthError("Nie udalo sie polaczyc z serwerem tokenow Google.") from exc
+        raise OAuthError("Nie udało się połączyć z serwerem tokenów Google.") from exc
     if response.status_code != 200:
         # Never log the payload: it contains the client secret and the code.
         logger.warning("Google token exchange failed with status %s", response.status_code)
-        raise OAuthError("Google odrzucil kod autoryzacyjny.")
+        raise OAuthError("Google odrzucił kod autoryzacyjny.")
     payload = response.json()
     if "id_token" not in payload:
-        raise OAuthError("Odpowiedz Google nie zawiera id_token.")
+        raise OAuthError("Odpowiedź Google nie zawiera id_token.")
     return payload
 
 
@@ -149,16 +149,16 @@ def verify_id_token(id_token: str, expected_nonce: str) -> GoogleIdentity:
         claims.validate(leeway=60)
     except JoseError as exc:
         logger.warning("Google id_token rejected: %s", type(exc).__name__)
-        raise OAuthError("Token tozsamosci Google jest nieprawidlowy.") from exc
+        raise OAuthError("Token tożsamości Google jest nieprawidłowy.") from exc
 
     if claims.get("nonce") != expected_nonce:
-        raise OAuthError("Nieprawidlowy nonce - mozliwa proba ataku replay.")
+        raise OAuthError("Nieprawidłowy nonce - możliwa próba ataku replay.")
 
     email = claims.get("email")
     if not email:
-        raise OAuthError("Konto Google nie udostepnilo adresu e-mail.")
+        raise OAuthError("Konto Google nie udostępniło adresu e-mail.")
     if not claims.get("email_verified", False):
-        raise OAuthError("Adres e-mail konta Google nie zostal zweryfikowany.")
+        raise OAuthError("Adres e-mail konta Google nie został zweryfikowany.")
 
     hosted_domain = claims.get("hd")
     if settings.google_allowed_domain and hosted_domain != settings.google_allowed_domain:

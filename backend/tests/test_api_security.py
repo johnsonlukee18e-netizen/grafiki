@@ -83,7 +83,7 @@ def test_login_is_audited(logged_in, db_session):
 def test_manager_cannot_reach_admin_endpoints(manager_client, method, path, payload):
     response = manager_client.request(method, path, json=payload)
     assert response.status_code == 403
-    assert "uprawnien" in response.json()["detail"]
+    assert "uprawnień" in response.json()["detail"]
 
 
 def test_manager_can_use_the_scheduling_workflow(manager_client):
@@ -120,7 +120,7 @@ def test_last_admin_cannot_be_demoted(logged_in):
     me = logged_in.get("/api/auth/me").json()
     response = logged_in.put(f"/api/users/{me['id']}", json={"role": "MANAGER"})
     assert response.status_code == 400
-    assert "wlasnemu kontu" in response.json()["detail"]
+    assert "własnemu kontu" in response.json()["detail"]
 
 
 # --- CSRF -----------------------------------------------------------------
@@ -351,7 +351,7 @@ def test_locked_account_cannot_use_the_api(client, seeded, db_engine):
 
     response = client.get("/api/employees")
     assert response.status_code == 401
-    assert "aktywacje" in response.json()["detail"]
+    assert "aktywację" in response.json()["detail"]
 
 
 def test_admin_can_activate_a_pending_account(logged_in, db_session):

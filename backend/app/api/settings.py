@@ -78,7 +78,7 @@ def update_shift(
         raise HTTPException(
             status_code=422,
             detail=(
-                "Minimalna liczba pielegniarek nie moze byc wieksza niz minimalna obsada "
+                "Minimalna liczba pielęgniarek nie może być większa niż minimalna obsada "
                 f"zmiany ({staff})."
             ),
         )

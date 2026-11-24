@@ -89,7 +89,7 @@ function buildSuggestions(data: ScheduleDetail, requests: Availability[]): Sugge
         current,
         text:
           request.type === 'UNAVAILABLE'
-            ? `zglosil(a) niedostepnosc, a ma ${current} - ustaw wolne`
+            ? `zgłosił(a) niedostępność, a ma ${current} - ustaw wolne`
             : `prosi o wolne, a ma ${current} - ustaw wolne`,
       })
       continue
@@ -172,8 +172,8 @@ export default function ManualPage() {
         },
         onError: (err) =>
           toasts.error(
-            'Nie udalo sie zapisac',
-            err instanceof ApiError ? err.message : 'Sprobuj ponownie.',
+            'Nie udało się zapisać',
+            err instanceof ApiError ? err.message : 'Spróbuj ponownie.',
           ),
       },
     )
@@ -185,7 +185,7 @@ export default function ManualPage() {
     if (shift && !shiftAllowedOn(shift, day)) {
       toasts.warning(
         `${shift.name} tylko w dni robocze`,
-        `${formatDate(day.date)} to ${day.is_holiday ? `swieto (${day.holiday_name})` : 'weekend'}.`,
+        `${formatDate(day.date)} to ${day.is_holiday ? `święto (${day.holiday_name})` : 'weekend'}.`,
       )
       return true
     }
@@ -229,18 +229,18 @@ export default function ManualPage() {
         if (errors === 0) {
           toasts.success(
             'Grafik sprawdzony',
-            'Wszystkie twarde reguly sa spelnione - mozesz go zatwierdzic.',
+            'Wszystkie twarde reguły są spełnione - możesz go zatwierdzić.',
           )
         } else {
           toasts.warning(
             'Grafik wymaga poprawek',
-            `Do poprawy: ${errors}. Kliknij blad w panelu kontroli, aby pokazac go w siatce.`,
+            `Do poprawy: ${errors}. Kliknij błąd w panelu kontroli, aby pokazać go w siatce.`,
           )
         }
       },
       onError: (err) =>
         toasts.error(
-          'Nie udalo sie sprawdzic grafiku',
+          'Nie udało się sprawdzić grafiku',
           err instanceof ApiError ? err.message : undefined,
         ),
     })
@@ -252,7 +252,7 @@ export default function ManualPage() {
 
   const header = (
     <PageHeader
-      title={`Reczne ukladanie - ${monthLabel(year, month)}`}
+      title={`Ręczne układanie - ${monthLabel(year, month)}`}
       subtitle={
         schedule ? (
           <span className="d-flex align-items-center gap-2">
@@ -261,7 +261,7 @@ export default function ManualPage() {
             <span>&middot; {data.assignments.length} zmian w grafiku</span>
           </span>
         ) : (
-          'Ten miesiac nie ma jeszcze grafiku.'
+          'Ten miesiąc nie ma jeszcze grafiku.'
         )
       }
       actions={
@@ -280,7 +280,7 @@ export default function ManualPage() {
                 ) : (
                   <i className="bi bi-send-check me-1" />
                 )}
-                Wyslij do sprawdzenia
+                Wyślij do sprawdzenia
               </button>
               {schedule?.status === 'VALID' && (
                 <button
@@ -292,7 +292,7 @@ export default function ManualPage() {
                         onSuccess: () => toasts.success('Grafik zatwierdzony'),
                         onError: (err) =>
                           toasts.error(
-                            'Nie mozna zatwierdzic',
+                            'Nie można zatwierdzić',
                             err instanceof ApiError ? err.message : undefined,
                             err instanceof ApiError ? err.violations.map((v) => v.message) : [],
                           ),
@@ -302,7 +302,7 @@ export default function ManualPage() {
                   disabled={busy}
                   type="button"
                 >
-                  <i className="bi bi-check-lg me-1" /> Zatwierdz
+                  <i className="bi bi-check-lg me-1" /> Zatwierdź
                 </button>
               )}
             </>
@@ -319,8 +319,8 @@ export default function ManualPage() {
     return (
       <>
         {header}
-        <EmptyState icon="bi-people" title="Brak aktywnych pracownikow">
-          Dodaj pracownikow w panelu PRACOWNICY, aby moc ulozyc grafik.
+        <EmptyState icon="bi-people" title="Brak aktywnych pracowników">
+          Dodaj pracowników w panelu PRACOWNICY, aby móc ułożyć grafik.
         </EmptyState>
       </>
     )
@@ -335,21 +335,21 @@ export default function ManualPage() {
           <div className="card-body">
             <h5 className="card-title">
               <i className="bi bi-pencil-square me-2" />
-              Uloz grafik recznie
+              Ułóż grafik ręcznie
             </h5>
             <p className="mb-2">
-              W tym trybie system <strong>nie generuje</strong> grafiku. Ukladasz go sam, klikajac
-              w siatke - nic nie jest blokowane w trakcie pracy. Gdy skonczysz, wysylasz grafik do
-              sprawdzenia i dostajesz liste rzeczy do poprawienia.
+              W tym trybie system <strong>nie generuje</strong> grafiku. Układasz go sam, klikając
+              w siatkę - nic nie jest blokowane w trakcie pracy. Gdy skończysz, wysyłasz grafik do
+              sprawdzenia i dostajesz listę rzeczy do poprawienia.
             </p>
             <p className="small text-secondary">
-              Prosby pracownikow (preferowane zmiany, wolne, niedostepnosc) pojawiaja sie jako
-              sugestie - mozesz je zaakceptowac jednym kliknieciem i zmienic pozniej.
+              Prośby pracowników (preferowane zmiany, wolne, niedostępność) pojawiają się jako
+              sugestie - możesz je zaakceptować jednym kliknięciem i zmienić później.
             </p>
             {locked ? (
               <div className="alert alert-dark py-2 small mb-0">
                 <i className="bi bi-lock me-1" />
-                Grafik jest zatwierdzony. Cofnij zatwierdzenie w widoku grafiku, aby go zmieniac.
+                Grafik jest zatwierdzony. Cofnij zatwierdzenie w widoku grafiku, aby go zmieniać.
               </div>
             ) : (
               <button
@@ -360,7 +360,7 @@ export default function ManualPage() {
                     {
                       onError: (err) =>
                         toasts.error(
-                          'Nie udalo sie rozpoczac',
+                          'Nie udało się rozpocząć',
                           err instanceof ApiError ? err.message : undefined,
                         ),
                     },
@@ -371,8 +371,8 @@ export default function ManualPage() {
               >
                 <i className="bi bi-pencil me-1" />
                 {hasRoster
-                  ? `Ukladaj recznie, zaczynajac od obecnego grafiku (${data.assignments.length} zmian)`
-                  : 'Rozpocznij reczne ukladanie'}
+                  ? `Układaj ręcznie, zaczynając od obecnego grafiku (${data.assignments.length} zmian)`
+                  : 'Rozpocznij ręczne układanie'}
               </button>
             )}
           </div>
@@ -392,37 +392,37 @@ export default function ManualPage() {
       {locked ? (
         <div className="alert alert-dark py-2" role="alert">
           <i className="bi bi-lock me-2" />
-          Grafik jest zatwierdzony. Aby go zmienic, cofnij zatwierdzenie w widoku grafiku.
+          Grafik jest zatwierdzony. Aby go zmienić, cofnij zatwierdzenie w widoku grafiku.
         </div>
       ) : schedule?.status === 'DRAFT' ? (
         <div className="alert alert-info py-2 small" role="alert">
           <i className="bi bi-info-circle me-2" />
-          Ukladasz grafik recznie - zmiany zapisuja sie od razu jako szkic i nie sa sprawdzane w
-          trakcie. Gdy skonczysz, kliknij <strong>Wyslij do sprawdzenia</strong>.
+          Układasz grafik ręcznie - zmiany zapisują się od razu jako szkic i nie są sprawdzane w
+          trakcie. Gdy skończysz, kliknij <strong>Wyślij do sprawdzenia</strong>.
         </div>
       ) : schedule?.status === 'INVALID' ? (
         <div className="alert alert-warning py-2" role="alert">
           <i className="bi bi-exclamation-triangle me-2" />
-          Do poprawy: <strong>{errorCount}</strong>. Kliknij blad w panelu kontroli, aby zaznaczyc
-          go w siatce, popraw i wyslij grafik ponownie.
+          Do poprawy: <strong>{errorCount}</strong>. Kliknij błąd w panelu kontroli, aby zaznaczyć
+          go w siatce, popraw i wyślij grafik ponownie.
         </div>
       ) : schedule?.status === 'VALID' ? (
         <div className="alert alert-success py-2" role="alert">
           <i className="bi bi-check-circle me-2" />
-          Grafik spelnia wszystkie twarde reguly. Mozesz go zatwierdzic albo dalej poprawiac.
+          Grafik spełnia wszystkie twarde reguły. Możesz go zatwierdzić albo dalej poprawiać.
         </div>
       ) : null}
 
       {editable && (
         <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
-          <span className="small text-secondary me-1">Pedzel:</span>
+          <span className="small text-secondary me-1">Pędzel:</span>
           <button
-            className={`btn btn-sm brush-btn ${brush === null ? 'btn-dark active' : 'btn-outline-dark'}`}
+            className={`btn btn-sm brush-btn ${brush === null ? 'btn-secondary active' : 'btn-outline-secondary'}`}
             onClick={() => setBrush(null)}
             type="button"
-            title="Klikniecie komorki otwiera okno wyboru"
+            title="Kliknięcie komórki otwiera okno wyboru"
           >
-            <i className="bi bi-hand-index me-1" /> Wybor
+            <i className="bi bi-hand-index me-1" /> Wybór
           </button>
           {data.shifts.map((shift: Shift) => (
             <button
@@ -444,8 +444,8 @@ export default function ManualPage() {
           </button>
           <span className="small text-secondary ms-2">
             {brush === null
-              ? 'Kliknij komorke, aby wybrac zmiane.'
-              : `Kazde klikniecie wpisuje ${brush}. Mozesz tez przeciagac zmiany.`}
+              ? 'Kliknij komórkę, aby wybrać zmianę.'
+              : `Każde kliknięcie wpisuje ${brush}. Możesz też przeciągać zmiany.`}
           </span>
         </div>
       )}
@@ -464,17 +464,17 @@ export default function ManualPage() {
       />
       <div className="small text-secondary mt-1 mb-3">
         <span className="me-3">
-          <span className="legend-swatch preferred-dot" /> kropka = prosba pracownika (najedz, aby
-          zobaczyc)
+          <span className="legend-swatch preferred-dot" /> kropka = prośba pracownika (najedź, aby
+          zobaczyć)
         </span>
-        <span className="me-3">polprzezroczysta zmiana = sugestia z prosby</span>
-        <span>Ranek (R) tylko w dni robocze - nie w weekendy i swieta.</span>
+        <span className="me-3">półprzezroczysta zmiana = sugestia z prośby</span>
+        <span>Ranek (R) tylko w dni robocze - nie w weekendy i święta.</span>
       </div>
 
       <div className="row g-3">
         <div className="col-12 col-xl-5">
           <div className="card shadow-sm h-100">
-            <div className="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+            <div className="card-header fw-semibold d-flex justify-content-between align-items-center">
               <span>
                 <i className="bi bi-lightbulb me-1" />
                 Sugestie z prosb ({suggestions.length})
@@ -492,7 +492,7 @@ export default function ManualPage() {
             </div>
             {suggestions.length === 0 ? (
               <div className="card-body small text-secondary">
-                Wszystkie prosby pracownikow sa uwzglednione w grafiku.
+                Wszystkie prośby pracowników są uwzględnione w grafiku.
               </div>
             ) : (
               <ul className="list-group list-group-flush suggestion-list">
@@ -537,10 +537,10 @@ export default function ManualPage() {
             />
           ) : (
             <div className="card shadow-sm h-100">
-              <div className="card-header bg-white fw-semibold">Kontrola grafiku</div>
+              <div className="card-header fw-semibold">Kontrola grafiku</div>
               <div className="card-body small text-secondary">
-                Reguly zostana sprawdzone po kliknieciu <strong>Wyslij do sprawdzenia</strong>.
-                Zobaczysz tu liste rzeczy do poprawienia.
+                Reguły zostaną sprawdzone po kliknięciu <strong>Wyślij do sprawdzenia</strong>.
+                Zobaczysz tu listę rzeczy do poprawienia.
               </div>
             </div>
           )}
@@ -608,7 +608,7 @@ function CellModal({
         <div className="alert alert-light border py-2 small d-flex justify-content-between align-items-center gap-2">
           <span>
             <i className="bi bi-chat-left-text me-1" />
-            Prosba: <strong>{AVAILABILITY_LABEL[request.type] ?? request.type}</strong>
+            Prośba: <strong>{AVAILABILITY_LABEL[request.type] ?? request.type}</strong>
             {request.note ? ` - ${request.note}` : ''}
           </span>
           {suggestion && (
@@ -637,7 +637,7 @@ function CellModal({
             >
               <strong className="me-2">{shift.code}</strong>
               {shift.name} ({shift.start_time.slice(0, 5)}-{shift.end_time.slice(0, 5)})
-              {!allowed && <span className="small ms-2">- nie w weekend / swieto</span>}
+              {!allowed && <span className="small ms-2">- nie w weekend / święto</span>}
             </button>
           )
         })}

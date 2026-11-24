@@ -17,22 +17,22 @@ class HolidayDef(NamedTuple):
 #: (month, day, name, first year in force)
 _FIXED: tuple[tuple[int, int, str, int], ...] = (
     (1, 1, "Nowy Rok", 1951),
-    (1, 6, "Swieto Trzech Kroli", 2011),
-    (5, 1, "Swieto Panstwowe (1 Maja)", 1951),
-    (5, 3, "Swieto Narodowe Trzeciego Maja", 1990),
-    (8, 15, "Wniebowziecie Najswietszej Maryi Panny", 1989),
-    (11, 1, "Wszystkich Swietych", 1989),
-    (11, 11, "Narodowe Swieto Niepodleglosci", 1989),
-    (12, 25, "Boze Narodzenie (pierwszy dzien)", 1951),
-    (12, 26, "Boze Narodzenie (drugi dzien)", 1951),
+    (1, 6, "Święto Trzech Króli", 2011),
+    (5, 1, "Święto Państwowe (1 Maja)", 1951),
+    (5, 3, "Święto Narodowe Trzeciego Maja", 1990),
+    (8, 15, "Wniebowzięcie Najświętszej Maryi Panny", 1989),
+    (11, 1, "Wszystkich Świętych", 1989),
+    (11, 11, "Narodowe Święto Niepodległości", 1989),
+    (12, 25, "Boże Narodzenie (pierwszy dzień)", 1951),
+    (12, 26, "Boże Narodzenie (drugi dzień)", 1951),
 )
 
 #: (offset from Easter Sunday, name)
 _MOVABLE: tuple[tuple[int, str], ...] = (
     (0, "Wielkanoc"),
-    (1, "Poniedzialek Wielkanocny"),
-    (49, "Zeslanie Ducha Swietego (Zielone Swiatki)"),
-    (60, "Boze Cialo"),
+    (1, "Poniedziałek Wielkanocny"),
+    (49, "Zesłanie Ducha Świętego (Zielone Świątki)"),
+    (60, "Boże Ciało"),
 )
 
 

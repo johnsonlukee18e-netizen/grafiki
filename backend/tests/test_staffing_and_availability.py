@@ -64,7 +64,7 @@ def test_unavailable_employee_may_not_be_scheduled(unstaffed_shifts):
     result = validate(ctx, [plan(1, SEPT[0], "D")])
     errors = [e for e in result.errors if e.code == rules.RULE_UNAVAILABLE]
     assert len(errors) == 1
-    assert "niedostepnosc" in errors[0].message
+    assert "niedostępność" in errors[0].message
     assert not result.valid
 
 

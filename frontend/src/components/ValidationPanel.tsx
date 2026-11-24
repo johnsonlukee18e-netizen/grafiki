@@ -15,9 +15,9 @@ export default function ValidationPanel({ validation, onLocate }: Props) {
   if (!validation) {
     return (
       <div className="card shadow-sm">
-        <div className="card-header bg-white fw-semibold">Kontrola grafiku</div>
+        <div className="card-header fw-semibold">Kontrola grafiku</div>
         <div className="card-body text-secondary small">
-          Grafik nie byl jeszcze walidowany.
+          Grafik nie był jeszcze walidowany.
         </div>
       </div>
     )
@@ -44,7 +44,7 @@ export default function ValidationPanel({ validation, onLocate }: Props) {
 
   return (
     <div className="card shadow-sm">
-      <div className="card-header bg-white d-flex justify-content-between align-items-center">
+      <div className="card-header d-flex justify-content-between align-items-center">
         <span className="fw-semibold">Kontrola grafiku</span>
         <span className={`badge text-bg-${statusBadge.variant}`}>{statusBadge.label}</span>
       </div>
@@ -96,7 +96,7 @@ export default function ValidationPanel({ validation, onLocate }: Props) {
                         type="button"
                       >
                         {item.date && (
-                          <span className="badge text-bg-light me-1">{formatDate(item.date)}</span>
+                          <span className="badge bg-body-secondary text-body me-1">{formatDate(item.date)}</span>
                         )}
                         {item.message}
                       </button>

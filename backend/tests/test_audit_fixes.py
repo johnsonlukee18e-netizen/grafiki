@@ -69,7 +69,7 @@ def test_nurse_shortage_is_explained_before_solving():
     assert not result.success
     codes = {d.code for d in result.diagnostics}
     assert "WEEK_NURSE_CAPACITY" in codes
-    assert any("pielegniar" in s for s in result.suggestions)
+    assert any("pielęgniar" in s for s in result.suggestions)
 
 
 def test_nurse_rule_off_by_default():

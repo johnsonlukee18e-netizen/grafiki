@@ -2,11 +2,11 @@
 import type { EmployeeColor } from './types'
 
 export const MONTHS_PL = [
-  'Styczen', 'Luty', 'Marzec', 'Kwiecien', 'Maj', 'Czerwiec',
-  'Lipiec', 'Sierpien', 'Wrzesien', 'Pazdziernik', 'Listopad', 'Grudzien',
+  'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+  'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień',
 ]
 
-export const WEEKDAYS_PL = ['Pn', 'Wt', 'Sr', 'Cz', 'Pt', 'So', 'Nd']
+export const WEEKDAYS_PL = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd']
 
 export function monthLabel(year: number, month: number): string {
   return `${MONTHS_PL[month - 1]} ${year}`
@@ -31,21 +31,21 @@ export function formatDateTime(iso: string | null): string {
 }
 
 export const COLOR_LABEL: Record<EmployeeColor, string> = {
-  RED: 'Pielegniarka, staz powyzej 3 lat',
-  YELLOW: 'Pielegniarka, staz 1-3 lata',
-  GREEN: 'Pielegniarka, staz do 1 roku',
+  RED: 'Pielęgniarka, staż powyżej 3 lat',
+  YELLOW: 'Pielęgniarka, staż 1-3 lata',
+  GREEN: 'Pielęgniarka, staż do 1 roku',
   PURPLE: 'Opiekunka',
 }
 
 export const ROLE_LABEL: Record<string, string> = {
-  NURSE: 'Pielegniarka',
+  NURSE: 'Pielęgniarka',
   CARE_WORKER: 'Opiekunka',
 }
 
 export const AVAILABILITY_LABEL: Record<string, string> = {
-  AVAILABLE: 'Dostepny',
-  UNAVAILABLE: 'Niedostepny (twarde)',
-  PREFERRED_DAY: 'Preferuje dzien (D)',
+  AVAILABLE: 'Dostępny',
+  UNAVAILABLE: 'Niedostępny (twarde)',
+  PREFERRED_DAY: 'Preferuje dzień (D)',
   PREFERRED_MORNING: 'Preferuje ranek (R)',
   PREFERRED_NIGHT: 'Preferuje noc (N)',
   PREFERRED_OFF: 'Prosi o wolne',
@@ -56,7 +56,7 @@ export const STATUS_LABEL: Record<string, string> = {
   GENERATING: 'Generowanie',
   GENERATED: 'Wygenerowany',
   VALID: 'Poprawny',
-  INVALID: 'Bledy',
+  INVALID: 'Błędy',
   APPROVED: 'Zatwierdzony',
   ARCHIVED: 'Zarchiwizowany',
 }
@@ -77,22 +77,22 @@ export const ACTION_LABEL: Record<string, string> = {
   EMPLOYEE_CREATED: 'Dodanie pracownika',
   EMPLOYEE_UPDATED: 'Edycja pracownika',
   EMPLOYEE_DEACTIVATED: 'Dezaktywacja pracownika',
-  AVAILABILITY_CHANGED: 'Zmiana dostepnosci',
+  AVAILABILITY_CHANGED: 'Zmiana dostępności',
   SCHEDULE_GENERATED: 'Wygenerowanie grafiku',
   SCHEDULE_VALIDATED: 'Walidacja grafiku',
   SCHEDULE_APPROVED: 'Zatwierdzenie grafiku',
-  SCHEDULE_RESTORED: 'Przywrocenie wersji grafiku',
-  SCHEDULE_MODE_CHANGED: 'Zmiana trybu ukladania grafiku',
-  SCHEDULE_MANUAL_EDIT: 'Reczne ukladanie grafiku',
+  SCHEDULE_RESTORED: 'Przywrócenie wersji grafiku',
+  SCHEDULE_MODE_CHANGED: 'Zmiana trybu układania grafiku',
+  SCHEDULE_MANUAL_EDIT: 'Ręczne układanie grafiku',
   ASSIGNMENT_CREATED: 'Dodanie zmiany',
   ASSIGNMENT_MOVED: 'Przeniesienie zmiany',
   ASSIGNMENT_UPDATED: 'Edycja zmiany',
-  ASSIGNMENT_DELETED: 'Usuniecie zmiany',
+  ASSIGNMENT_DELETED: 'Usunięcie zmiany',
   PDF_EXPORTED: 'Eksport PDF',
-  SETTINGS_UPDATED: 'Zmiana ustawien',
+  SETTINGS_UPDATED: 'Zmiana ustawień',
   USER_ROLE_CHANGED: 'Zmiana roli',
   USER_ACTIVATION_CHANGED: 'Aktywacja konta',
-  HOLIDAYS_IMPORTED: 'Swieta',
+  HOLIDAYS_IMPORTED: 'Święta',
 }
 
 /** A working-days-only shift (R) does not exist on weekends and holidays. */

@@ -56,7 +56,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=status.HTTP_403_FORBIDDEN,
                 content={
-                    "detail": "Nieprawidlowy token CSRF. Odswiez strone i sprobuj ponownie."
+                    "detail": "Nieprawidłowy token CSRF. Odśwież stronę i spróbuj ponownie."
                 },
             )
         return await call_next(request)
@@ -114,7 +114,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             retry_after = int(window - (now - hits[0])) + 1
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={"detail": "Zbyt wiele zadan. Sprobuj ponownie za chwile."},
+                content={"detail": "Zbyt wiele zadań. Spróbuj ponownie za chwilę."},
                 headers={"Retry-After": str(retry_after)},
             )
         hits.append(now)

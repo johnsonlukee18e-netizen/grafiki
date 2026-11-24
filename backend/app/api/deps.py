@@ -38,14 +38,14 @@ def current_user(
     if data is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Brak aktywnej sesji. Zaloguj sie ponownie.",
+            detail="Brak aktywnej sesji. Zaloguj się ponownie.",
         )
     user = db.get(User, data.user_id)
     if user is None or not user.is_active:
         session_module.clear_session(response)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Konto nie ma dostepu do systemu. Poproś administratora o aktywacje.",
+            detail="Konto nie ma dostępu do systemu. Poproś administratora o aktywację.",
         )
     if user.role.value != data.role:
         # The role changed since the cookie was issued - re-issue it so the
@@ -61,7 +61,7 @@ def require_manager(user: User = Depends(current_user)) -> User:
     if user.role not in (UserRole.MANAGER, UserRole.ADMIN):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Nie masz uprawnien do wykonania tej operacji.",
+            detail="Nie masz uprawnień do wykonania tej operacji.",
         )
     return user
 
@@ -70,6 +70,6 @@ def require_admin(user: User = Depends(current_user)) -> User:
     if user.role is not UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Nie masz uprawnien do wykonania tej operacji. Wymagana rola ADMIN.",
+            detail="Nie masz uprawnień do wykonania tej operacji. Wymagana rola ADMIN.",
         )
     return user

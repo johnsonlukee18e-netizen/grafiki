@@ -32,7 +32,7 @@ export default function EmployeesPage() {
   const submit = () => {
     if (!editing) return
     if (!editing.data.first_name.trim() || !editing.data.last_name.trim()) {
-      toasts.error('Uzupelnij dane', 'Imie i nazwisko sa wymagane.')
+      toasts.error('Uzupełnij dane', 'Imię i nazwisko są wymagane.')
       return
     }
     save.mutate(editing, {
@@ -48,7 +48,7 @@ export default function EmployeesPage() {
     <>
       <PageHeader
         title="Pracownicy"
-        subtitle="Kolor wynika automatycznie ze stazu pracy i roli - nie mozna go ustawic recznie."
+        subtitle="Kolor wynika automatycznie ze stażu pracy i roli - nie można go ustawić ręcznie."
         actions={
           <>
             <div className="form-check form-switch align-self-center me-2">
@@ -60,7 +60,7 @@ export default function EmployeesPage() {
                 onChange={(e) => setShowInactive(e.target.checked)}
               />
               <label className="form-check-label small" htmlFor="showInactive">
-                Pokaz nieaktywnych
+                Pokaż nieaktywnych
               </label>
             </div>
             <button
@@ -77,14 +77,14 @@ export default function EmployeesPage() {
       <div className="card shadow-sm">
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
+            <thead className="">
               <tr>
                 <th style={{ width: 50 }}>Kolor</th>
-                <th>Imie</th>
+                <th>Imię</th>
                 <th>Nazwisko</th>
                 <th>Rola</th>
                 <th>Zatrudniony</th>
-                <th>Staz</th>
+                <th>Staż</th>
                 <th>Aktywny</th>
                 <th className="text-end">Akcje</th>
               </tr>
@@ -122,7 +122,7 @@ export default function EmployeesPage() {
                         onClick={() =>
                           deactivate.mutate(employee.id, {
                             onSuccess: () => toasts.success('Pracownik dezaktywowany'),
-                            onError: (err) => toasts.error('Blad', (err as Error).message),
+                            onError: (err) => toasts.error('Błąd', (err as Error).message),
                           })
                         }
                         type="button"
@@ -136,7 +136,7 @@ export default function EmployeesPage() {
               {employees.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center text-secondary py-4">
-                    Brak pracownikow.
+                    Brak pracowników.
                   </td>
                 </tr>
               )}
@@ -171,7 +171,7 @@ export default function EmployeesPage() {
         >
           <div className="row g-3">
             <div className="col-6">
-              <label className="form-label">Imie</label>
+              <label className="form-label">Imię</label>
               <input
                 className="form-control"
                 value={editing.data.first_name}
@@ -199,7 +199,7 @@ export default function EmployeesPage() {
                   setEditing({ ...editing, data: { ...editing.data, role: e.target.value } })
                 }
               >
-                <option value="NURSE">Pielegniarka</option>
+                <option value="NURSE">Pielęgniarka</option>
                 <option value="CARE_WORKER">Opiekunka</option>
               </select>
             </div>
@@ -229,7 +229,7 @@ export default function EmployeesPage() {
                   }
                 />
                 <label className="form-check-label" htmlFor="activeSwitch">
-                  Pracownik aktywny (uwzgledniany w grafiku)
+                  Pracownik aktywny (uwzględniany w grafiku)
                 </label>
               </div>
             </div>

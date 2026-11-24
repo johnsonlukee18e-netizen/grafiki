@@ -32,14 +32,14 @@ export default function HistoryPage() {
   return (
     <>
       <PageHeader
-        title="Historia grafikow"
-        subtitle="Kazda generacja i kazda reczna korekta zapisuje nowa wersje. Nic nie jest usuwane - starsza wersje mozna podejrzec i przywrocic."
+        title="Historia grafików"
+        subtitle="Każda generacja i każda ręczna korekta zapisuje nową wersję. Nic nie jest usuwane - starszą wersję można podejrzeć i przywrócić."
       />
 
       <div className="row g-3">
         <div className="col-12 col-lg-4">
           <div className="card shadow-sm">
-            <div className="card-header bg-white fw-semibold">Grafiki</div>
+            <div className="card-header fw-semibold">Grafiki</div>
             <ul className="list-group list-group-flush">
               {list.map((item) => (
                 <li
@@ -58,7 +58,7 @@ export default function HistoryPage() {
                 </li>
               ))}
               {list.length === 0 && (
-                <li className="list-group-item text-secondary small">Brak grafikow.</li>
+                <li className="list-group-item text-secondary small">Brak grafików.</li>
               )}
             </ul>
           </div>
@@ -66,22 +66,22 @@ export default function HistoryPage() {
 
         <div className="col-12 col-lg-8">
           <div className="card shadow-sm">
-            <div className="card-header bg-white fw-semibold d-flex justify-content-between">
+            <div className="card-header fw-semibold d-flex justify-content-between">
               <span>
                 {schedule ? `Wersje - ${monthLabel(schedule.year, schedule.month)}` : 'Wersje'}
               </span>
               {schedule && (
                 <span className="fw-normal small text-secondary">
-                  biezaca: v{schedule.version}
+                  bieżąca: v{schedule.version}
                 </span>
               )}
             </div>
             <div className="table-responsive">
               <table className="table table-sm align-middle mb-0">
-                <thead className="table-light">
+                <thead className="">
                   <tr>
                     <th>Wersja</th>
-                    <th>Powod zmiany</th>
+                    <th>Powód zmiany</th>
                     <th>Status</th>
                     <th>Data</th>
                     <th />
@@ -103,7 +103,7 @@ export default function HistoryPage() {
                           type="button"
                         >
                           <i className="bi bi-eye me-1" />
-                          Podglad
+                          Podgląd
                         </button>
                       </td>
                     </tr>
@@ -118,8 +118,8 @@ export default function HistoryPage() {
                 </tbody>
               </table>
             </div>
-            <div className="card-footer bg-white small text-secondary">
-              Wersja vN to stan grafiku zapisany tuz przed zmiana opisana w kolumnie &quot;Powod
+            <div className="card-footer bg-transparent small text-secondary">
+              Wersja vN to stan grafiku zapisany tuż przed zmianą opisaną w kolumnie &quot;Powód
               zmiany&quot;.
             </div>
           </div>
@@ -171,18 +171,18 @@ function VersionPreview({
       { id: schedule.id, version: version.version },
       {
         onSuccess: (response) => {
-          const title = `Przywrocono wersje v${version.version}`
+          const title = `Przywrócono wersję v${version.version}`
           if (response.validation.valid && response.skipped.length === 0) {
             toasts.success(
               title,
-              `Grafik jest teraz w wersji v${response.schedule.version} i spelnia twarde ograniczenia.`,
+              `Grafik jest teraz w wersji v${response.schedule.version} i spełnia twarde ograniczenia.`,
             )
           } else {
             toasts.warning(
               title,
               response.validation.valid
-                ? 'Czesci wpisow nie dalo sie przywrocic:'
-                : `Grafik jest w wersji v${response.schedule.version}, ale przy obecnych danych ma bledy - sprawdz panel walidacji.`,
+                ? 'Części wpisów nie dało się przywrócić:'
+                : `Grafik jest w wersji v${response.schedule.version}, ale przy obecnych danych ma błędy - sprawdź panel walidacji.`,
               response.skipped,
             )
           }
@@ -191,8 +191,8 @@ function VersionPreview({
         },
         onError: (err) =>
           toasts.error(
-            'Nie udalo sie przywrocic wersji',
-            err instanceof ApiError ? err.message : 'Sprobuj ponownie.',
+            'Nie udało się przywrócić wersji',
+            err instanceof ApiError ? err.message : 'Spróbuj ponownie.',
           ),
       },
     )
@@ -212,7 +212,7 @@ function VersionPreview({
             (confirming ? (
               <>
                 <span className="small text-secondary me-2">
-                  Biezacy grafik zostanie zapisany w historii, a ta wersja stanie sie aktualna.
+                  Bieżący grafik zostanie zapisany w historii, a ta wersja stanie się aktualna.
                 </span>
                 <button
                   className="btn btn-warning"
@@ -221,7 +221,7 @@ function VersionPreview({
                   type="button"
                 >
                   {restore.isPending && <span className="spinner-border spinner-border-sm me-1" />}
-                  Potwierdz przywrocenie
+                  Potwierdź przywrócenie
                 </button>
               </>
             ) : (
@@ -232,7 +232,7 @@ function VersionPreview({
                 type="button"
               >
                 <i className="bi bi-arrow-counterclockwise me-1" />
-                Przywroc te wersje
+                Przywróć tę wersję
               </button>
             ))}
         </>
@@ -245,7 +245,7 @@ function VersionPreview({
       {locked && (
         <div className="alert alert-dark py-2 small">
           <i className="bi bi-lock me-1" />
-          Grafik jest zatwierdzony. Aby przywrocic starsza wersje, najpierw cofnij zatwierdzenie.
+          Grafik jest zatwierdzony. Aby przywrócić starszą wersję, najpierw cofnij zatwierdzenie.
         </div>
       )}
       {error && <ErrorBox error={error} />}

@@ -31,7 +31,7 @@ def update_user(
 ) -> User:
     target = db.get(User, user_id)
     if target is None:
-        raise HTTPException(status_code=404, detail="Nie znaleziono uzytkownika.")
+        raise HTTPException(status_code=404, detail="Nie znaleziono użytkownika.")
     changes = payload.model_dump(exclude_unset=True)
 
     if target.id == admin.id and (
@@ -39,7 +39,7 @@ def update_user(
     ):
         raise HTTPException(
             status_code=400,
-            detail="Nie mozna odebrac uprawnien wlasnemu kontu.",
+            detail="Nie można odebrać uprawnień własnemu kontu.",
         )
     if target.role is UserRole.ADMIN and changes.get("role") not in (None, UserRole.ADMIN):
         remaining = db.scalar(
@@ -49,7 +49,7 @@ def update_user(
         )
         if remaining is None:
             raise HTTPException(
-                status_code=400, detail="System musi miec co najmniej jednego administratora."
+                status_code=400, detail="System musi mieć co najmniej jednego administratora."
             )
 
     for field, value in changes.items():
